@@ -1,36 +1,11 @@
 <?php
 $pageTitle = "Order Details";
 include __DIR__ . '/includes/header.php';
-
-// Get order ID from URL
-$order_id = $_GET['id'] ?? null;
-
-if (!$order_id) {
-    header('Location: /admin/orders');
-    exit;
-}
-
-// Get order details
-$order = $db->fetchOne("SELECT * FROM orders WHERE id = ?", [$order_id]);
-
-if (!$order) {
-    echo "Order not found";
-    exit;
-}
-
-// Get order items
-$orderItems = $db->fetchAll(
-    "SELECT oi.*, p.name as product_name, p.image 
-     FROM order_items oi 
-     LEFT JOIN products p ON oi.product_id = p.id 
-     WHERE oi.order_id = ?",
-    [$order_id]
-);
 ?>
 
 <div class="admin-content">
     <div class="page-header">
-        <h1>Order #<?php echo htmlspecialchars($order['order_number']); ?></h1>
+        <h1>Order #<?php echo htmlspecialchars($order->order_number); ?></h1>
         <a href="/admin/orders" class="btn btn-secondary">Back to Orders</a>
     </div>
 
@@ -41,32 +16,40 @@ $orderItems = $db->fetchAll(
             <table class="info-table">
                 <tr>
                     <td><strong>Order Date:</strong></td>
-                    <td><?php echo date('F d, Y H:i', strtotime($order['created_at'])); ?></td>
+                    <td><?php echo date('F d, Y H:i', strtotime($order->created_at)); ?></td>
                 </tr>
                 <tr>
                     <td><strong>Payment Status:</strong></td>
                     <td>
-                        <span class="badge badge-<?php echo $order['payment_status']; ?>">
-                            <?php echo ucfirst($order['payment_status']); ?>
+                        <span class="badge badge-<?php echo strtolower($order->payment_status); ?>">
+                            <?php echo ucfirst($order->payment_status); ?>
                         </span>
                     </td>
                 </tr>
                 <tr>
                     <td><strong>Payment Method:</strong></td>
-                    <td><?php echo ucfirst($order['payment_method'] ?? 'N/A'); ?></td>
+                    <td><?php echo ucfirst($order->payment_method ?? 'N/A'); ?></td>
+                </tr>
+                <tr>
+                    <td><strong>Order Status:</strong></td>
+                    <td>
+                        <span class="badge badge-<?php echo strtolower($order->status); ?>">
+                            <?php echo ucfirst($order->status); ?>
+                        </span>
+                    </td>
                 </tr>
             </table>
 
             <h4>Update Order Status</h4>
             <form method="POST" action="/admin/orders/update-status">
                 <?php echo csrf_field(); ?>
-                <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                <input type="hidden" name="order_id" value="<?php echo $order->id; ?>">
                 <select name="status" class="form-control" required>
-                    <option value="pending" <?php echo $order['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                    <option value="processing" <?php echo $order['status'] === 'processing' ? 'selected' : ''; ?>>Processing</option>
-                    <option value="shipped" <?php echo $order['status'] === 'shipped' ? 'selected' : ''; ?>>Shipped</option>
-                    <option value="delivered" <?php echo $order['status'] === 'delivered' ? 'selected' : ''; ?>>Delivered</option>
-                    <option value="cancelled" <?php echo $order['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                    <option value="Pending" <?php echo $order->status === 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                    <option value="Processing" <?php echo $order->status === 'Processing' ? 'selected' : ''; ?>>Processing</option>
+                    <option value="Shipped" <?php echo $order->status === 'Shipped' ? 'selected' : ''; ?>>Shipped</option>
+                    <option value="Delivered" <?php echo $order->status === 'Delivered' ? 'selected' : ''; ?>>Delivered</option>
+                    <option value="Cancelled" <?php echo $order->status === 'Cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                 </select>
                 <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Update Status</button>
             </form>
@@ -78,24 +61,29 @@ $orderItems = $db->fetchAll(
             <table class="info-table">
                 <tr>
                     <td><strong>Name:</strong></td>
-                    <td><?php echo htmlspecialchars($order['customer_name']); ?></td>
+                    <td><?php echo htmlspecialchars($order->customer_name); ?></td>
                 </tr>
                 <tr>
                     <td><strong>Email:</strong></td>
-                    <td><?php echo htmlspecialchars($order['customer_email']); ?></td>
+                    <td><?php echo htmlspecialchars($order->customer_email); ?></td>
                 </tr>
                 <tr>
                     <td><strong>Phone:</strong></td>
-                    <td><?php echo htmlspecialchars($order['customer_phone'] ?? 'N/A'); ?></td>
+                    <td><?php echo htmlspecialchars($order->customer_phone ?? 'N/A'); ?></td>
                 </tr>
             </table>
 
             <h4>Shipping Address</h4>
             <p>
-                <?php echo htmlspecialchars($order['shipping_address']); ?><br>
-                <?php echo htmlspecialchars($order['shipping_city']); ?>, <?php echo htmlspecialchars($order['shipping_state']); ?> <?php echo htmlspecialchars($order['shipping_zip']); ?><br>
-                <?php echo htmlspecialchars($order['shipping_country']); ?>
+                <?php echo htmlspecialchars($order->shipping_address ?? 'N/A'); ?><br>
+                <?php echo htmlspecialchars($order->shipping_city ?? ''); ?>, <?php echo htmlspecialchars($order->shipping_state ?? ''); ?> <?php echo htmlspecialchars($order->shipping_zip ?? ''); ?><br>
+                <?php echo htmlspecialchars($order->shipping_country ?? ''); ?>
             </p>
+
+            <?php if (!empty($order->notes)): ?>
+            <h4>Order Notes</h4>
+            <p><?php echo nl2br(htmlspecialchars($order->notes)); ?></p>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -113,41 +101,51 @@ $orderItems = $db->fetchAll(
                 </tr>
             </thead>
             <tbody>
-                <?php if ($orderItems): ?>
+                <?php if (!empty($orderItems) && count($orderItems) > 0): ?>
                     <?php foreach ($orderItems as $item): ?>
                         <tr>
                             <td>
-                                <?php if ($item['image']): ?>
-                                    <img src="/<?php echo htmlspecialchars($item['image']); ?>" alt="" style="width:50px;height:50px;object-fit:cover;margin-right:10px;vertical-align:middle;">
+                                <?php if (!empty($item->image)): ?>
+                                    <img src="/<?php echo htmlspecialchars($item->image); ?>" alt="" style="width:50px;height:50px;object-fit:cover;margin-right:10px;vertical-align:middle;">
                                 <?php endif; ?>
-                                <?php echo htmlspecialchars($item['product_name']); ?>
+                                <?php echo htmlspecialchars($item->product_name ?? 'N/A'); ?>
                             </td>
-                            <td><?php echo htmlspecialchars($item['sku'] ?? 'N/A'); ?></td>
-                            <td><?php echo formatPrice($item['price']); ?></td>
-                            <td><?php echo $item['quantity']; ?></td>
-                            <td><?php echo formatPrice($item['price'] * $item['quantity']); ?></td>
+                            <td><?php echo htmlspecialchars($item->product_sku ?? 'N/A'); ?></td>
+                            <td><?php echo formatPrice($item->price); ?></td>
+                            <td><?php echo $item->quantity; ?></td>
+                            <td><?php echo formatPrice($item->subtotal ?? ($item->price * $item->quantity)); ?></td>
                         </tr>
                     <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="5" class="text-center">No items found</td>
+                    </tr>
                 <?php endif; ?>
             </tbody>
             <tfoot>
                 <tr>
                     <td colspan="4" style="text-align:right;"><strong>Subtotal:</strong></td>
-                    <td><?php echo formatPrice($order['subtotal_amount'] ?? $order['total_amount']); ?></td>
+                    <td><?php echo formatPrice($order->subtotal ?? 0); ?></td>
                 </tr>
+                <?php if (isset($order->tax_amount) && $order->tax_amount > 0): ?>
+                <tr>
+                    <td colspan="4" style="text-align:right;"><strong>Tax:</strong></td>
+                    <td><?php echo formatPrice($order->tax_amount); ?></td>
+                </tr>
+                <?php endif; ?>
                 <tr>
                     <td colspan="4" style="text-align:right;"><strong>Shipping:</strong></td>
-                    <td><?php echo formatPrice($order['shipping_amount'] ?? 0); ?></td>
+                    <td><?php echo formatPrice($order->shipping_cost ?? 0); ?></td>
                 </tr>
-                <?php if (isset($order['discount_amount']) && $order['discount_amount'] > 0): ?>
+                <?php if (isset($order->discount_amount) && $order->discount_amount > 0): ?>
                 <tr>
                     <td colspan="4" style="text-align:right;"><strong>Discount:</strong></td>
-                    <td>-<?php echo formatPrice($order['discount_amount']); ?></td>
+                    <td>-<?php echo formatPrice($order->discount_amount); ?></td>
                 </tr>
                 <?php endif; ?>
                 <tr>
                     <td colspan="4" style="text-align:right;"><strong>Total:</strong></td>
-                    <td><strong><?php echo formatPrice($order['total_amount']); ?></strong></td>
+                    <td><strong><?php echo formatPrice($order->total_amount); ?></strong></td>
                 </tr>
             </tfoot>
         </table>

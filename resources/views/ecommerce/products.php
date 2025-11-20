@@ -151,7 +151,7 @@ $categories = $db->fetchAll("SELECT * FROM categories WHERE is_active = 1 ORDER 
                                 <a href="?page=product-detail&slug=<?php echo $product['slug']; ?>">
                                     <div class="product-image">
                                         <?php if ($product['image']): ?>
-                                            <img src="/uploads/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
+                                            <img src="/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
                                         <?php else: ?>
                                             <div class="product-placeholder">
                                                 <i class="fas fa-image"></i>

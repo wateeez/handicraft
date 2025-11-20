@@ -57,7 +57,17 @@ class AdminController extends Controller
     public function dashboard()
     {
         $this->requireLogin();
-        return $this->renderAdminPage('dashboard');
+        
+        // Get dashboard statistics
+        $data = [
+            'total_orders' => DB::table('orders')->count(),
+            'pending_orders' => DB::table('orders')->where('status', 'Pending')->count(),
+            'total_revenue' => DB::table('orders')->where('payment_status', 'Paid')->sum('total_amount'),
+            'recent_orders' => DB::table('orders')->orderBy('created_at', 'DESC')->limit(10)->get(),
+            'low_stock_products' => DB::table('products')->where('stock_quantity', '<=', 10)->where('stock_quantity', '>', 0)->get()
+        ];
+        
+        return $this->renderAdminPage('dashboard', $data);
     }
 
     public function products()
@@ -614,16 +624,99 @@ class AdminController extends Controller
         return response()->json($subcategories);
     }
 
-    public function orders()
+    public function orders(Request $request)
     {
         $this->requireLogin();
-        return $this->renderAdminPage('orders');
+        
+        // Get filters
+        $statusFilter = $request->input('status', '');
+        $search = $request->input('search', '');
+        
+        // Build query
+        $query = DB::table('orders');
+        
+        if ($statusFilter) {
+            $query->where('status', $statusFilter);
+        }
+        
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('order_number', 'LIKE', "%$search%")
+                  ->orWhere('customer_name', 'LIKE', "%$search%")
+                  ->orWhere('customer_email', 'LIKE', "%$search%");
+            });
+        }
+        
+        $orders = $query->orderBy('created_at', 'DESC')->get();
+        
+        // Get order items count for each order
+        foreach ($orders as $order) {
+            $order->items_count = DB::table('order_items')
+                ->where('order_id', $order->id)
+                ->sum('quantity');
+        }
+        
+        $data = [
+            'orders' => $orders,
+            'status_filter' => $statusFilter,
+            'search' => $search
+        ];
+        
+        return $this->renderAdminPage('orders', $data);
     }
 
     public function orderDetail($id)
     {
         $this->requireLogin();
-        return $this->renderAdminPage('order-detail');
+        
+        // Get order
+        $order = DB::table('orders')->where('id', $id)->first();
+        
+        if (!$order) {
+            Session::flash('error', 'Order not found');
+            return redirect()->route('admin.orders');
+        }
+        
+        // Get order items with product details
+        $orderItems = DB::table('order_items as oi')
+            ->leftJoin('products as p', 'oi.product_id', '=', 'p.id')
+            ->select('oi.*', 'p.name as product_name')
+            ->where('oi.order_id', $id)
+            ->get();
+        
+        // Get product images for order items
+        foreach ($orderItems as $item) {
+            if ($item->product_id) {
+                $image = DB::table('product_images')
+                    ->where('product_id', $item->product_id)
+                    ->where('is_primary', 1)
+                    ->first();
+                $item->image = $image ? $image->image_path : null;
+            }
+        }
+        
+        // Get payment provider name
+        if ($order->payment_provider_id) {
+            $provider = DB::table('payment_providers')->where('id', $order->payment_provider_id)->first();
+            $order->payment_method = $provider ? $provider->name : 'N/A';
+        } else {
+            $order->payment_method = 'N/A';
+        }
+        
+        // Get shipping method name
+        if ($order->shipping_method_id) {
+            $shippingMethod = DB::table('shipping_methods')->where('id', $order->shipping_method_id)->first();
+            $order->shipping_method = $shippingMethod ? $shippingMethod->name : 'N/A';
+        } else {
+            $order->shipping_method = 'N/A';
+        }
+        
+        $data = [
+            'order' => $order,
+            'orderItems' => $orderItems
+        ];
+        
+        return $this->renderAdminPage('order-detail', $data);
     }
 
     public function updateOrderStatus(Request $request)
@@ -652,9 +745,12 @@ class AdminController extends Controller
         }
     }
 
-    private function renderAdminPage($page)
+    private function renderAdminPage($page, $data = [])
     {
         require_once app_path('Helpers/functions.php');
+        
+        // Extract data for the view
+        extract($data);
         
         // Create a database wrapper for legacy views
         $db = new class {

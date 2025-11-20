@@ -35,7 +35,7 @@ $blogs = $db->fetchAll(
                         <?php if ($blog['featured_image']): ?>
                             <div class="blog-image">
                                 <a href="?page=blog-detail&slug=<?php echo $blog['slug']; ?>">
-                                    <img src="/uploads/<?php echo htmlspecialchars($blog['featured_image']); ?>" alt="<?php echo htmlspecialchars($blog['title']); ?>">
+                                    <img src="/<?php echo htmlspecialchars($blog['featured_image']); ?>" alt="<?php echo htmlspecialchars($blog['title']); ?>">
                                 </a>
                             </div>
                         <?php endif; ?>

@@ -41,7 +41,7 @@ $relatedBlogs = $db->fetchAll(
         <article class="blog-post">
             <?php if ($blog['featured_image']): ?>
                 <div class="blog-featured-image">
-                    <img src="/uploads/<?php echo htmlspecialchars($blog['featured_image']); ?>" alt="<?php echo htmlspecialchars($blog['title']); ?>">
+                    <img src="/<?php echo htmlspecialchars($blog['featured_image']); ?>" alt="<?php echo htmlspecialchars($blog['title']); ?>">
                 </div>
             <?php endif; ?>
 
@@ -79,7 +79,7 @@ $relatedBlogs = $db->fetchAll(
                             <?php if ($relatedBlog['featured_image']): ?>
                                 <div class="blog-image">
                                     <a href="?page=blog-detail&slug=<?php echo $relatedBlog['slug']; ?>">
-                                        <img src="/uploads/<?php echo htmlspecialchars($relatedBlog['featured_image']); ?>" alt="<?php echo htmlspecialchars($relatedBlog['title']); ?>">
+                                        <img src="/<?php echo htmlspecialchars($relatedBlog['featured_image']); ?>" alt="<?php echo htmlspecialchars($relatedBlog['title']); ?>">
                                     </a>
                                 </div>
                             <?php endif; ?>

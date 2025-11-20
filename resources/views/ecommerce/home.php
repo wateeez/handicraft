@@ -42,7 +42,7 @@ $latestBlogs = $db->fetchAll(
                 <div class="category-card">
                     <a href="/shop/products?category=<?php echo $category['slug']; ?>">
                         <?php if ($category['image']): ?>
-                            <img src="/uploads/<?php echo htmlspecialchars($category['image']); ?>" alt="<?php echo htmlspecialchars($category['name']); ?>">
+                            <img src="/<?php echo htmlspecialchars($category['image']); ?>" alt="<?php echo htmlspecialchars($category['name']); ?>">
                         <?php else: ?>
                             <div class="category-placeholder">
                                 <i class="fas fa-box"></i>
@@ -66,7 +66,7 @@ $latestBlogs = $db->fetchAll(
                     <a href="/shop/product/<?php echo $product['slug']; ?>">
                         <div class="product-image">
                             <?php if ($product['image']): ?>
-                                <img src="/uploads/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
+                                <img src="/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
                             <?php else: ?>
                                 <div class="product-placeholder">
                                     <i class="fas fa-image"></i>
@@ -142,7 +142,7 @@ $latestBlogs = $db->fetchAll(
             <?php foreach ($latestBlogs as $blog): ?>
                 <div class="blog-card">
                     <?php if ($blog['featured_image']): ?>
-                        <img src="/uploads/<?php echo htmlspecialchars($blog['featured_image']); ?>" alt="<?php echo htmlspecialchars($blog['title']); ?>">
+                        <img src="/<?php echo htmlspecialchars($blog['featured_image']); ?>" alt="<?php echo htmlspecialchars($blog['title']); ?>">
                     <?php endif; ?>
                     <div class="blog-content">
                         <h3><a href="/shop/blog/<?php echo $blog['slug']; ?>"><?php echo htmlspecialchars($blog['title']); ?></a></h3>

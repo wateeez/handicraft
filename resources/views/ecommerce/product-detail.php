@@ -185,7 +185,7 @@ foreach ($shippingMethods as $method) {
                             <a href="/shop/product/<?php echo $relatedProduct['slug']; ?>">
                                 <div class="product-image">
                                     <?php if ($relatedProduct['image']): ?>
-                                        <img src="/uploads/<?php echo htmlspecialchars($relatedProduct['image']); ?>" alt="<?php echo htmlspecialchars($relatedProduct['name']); ?>">
+                                        <img src="/<?php echo htmlspecialchars($relatedProduct['image']); ?>" alt="<?php echo htmlspecialchars($relatedProduct['name']); ?>">
                                     <?php else: ?>
                                         <div class="product-placeholder">
                                             <i class="fas fa-image"></i>

@@ -5,7 +5,8 @@ $pageTitle = "Checkout";
 $cartItems = getCartItems();
 
 if (empty($cartItems)) {
-    redirect('?page=cart');
+    echo '<script>window.location.href="/shop/cart";</script>';
+    exit;
 }
 
 // Get shipping methods
@@ -22,175 +23,50 @@ $subtotal = 0;
 foreach ($cartItems as $item) {
     $subtotal += $item['price'] * $item['quantity'];
 }
-
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $errors = [];
-    
-    // Validate customer information
-    $customerName = sanitize($_POST['customer_name'] ?? '');
-    $customerEmail = sanitize($_POST['customer_email'] ?? '');
-    $customerPhone = sanitize($_POST['customer_phone'] ?? '');
-    
-    // Billing address
-    $billingAddress = sanitize($_POST['billing_address'] ?? '');
-    $billingCity = sanitize($_POST['billing_city'] ?? '');
-    $billingState = sanitize($_POST['billing_state'] ?? '');
-    $billingCountry = sanitize($_POST['billing_country'] ?? '');
-    $billingZip = sanitize($_POST['billing_zip'] ?? '');
-    
-    // Shipping address
-    $sameAsBilling = isset($_POST['same_as_billing']);
-    if ($sameAsBilling) {
-        $shippingAddress = $billingAddress;
-        $shippingCity = $billingCity;
-        $shippingState = $billingState;
-        $shippingCountry = $billingCountry;
-        $shippingZip = $billingZip;
-    } else {
-        $shippingAddress = sanitize($_POST['shipping_address'] ?? '');
-        $shippingCity = sanitize($_POST['shipping_city'] ?? '');
-        $shippingState = sanitize($_POST['shipping_state'] ?? '');
-        $shippingCountry = sanitize($_POST['shipping_country'] ?? '');
-        $shippingZip = sanitize($_POST['shipping_zip'] ?? '');
-    }
-    
-    $shippingMethodId = intval($_POST['shipping_method'] ?? 0);
-    $paymentProviderId = intval($_POST['payment_provider'] ?? 0);
-    $notes = sanitize($_POST['notes'] ?? '');
-    $couponCode = sanitize($_POST['coupon_code'] ?? '');
-    
-    // Validation
-    if (empty($customerName)) $errors[] = "Name is required";
-    if (empty($customerEmail) || !isEmail($customerEmail)) $errors[] = "Valid email is required";
-    if (empty($billingAddress)) $errors[] = "Billing address is required";
-    if (empty($billingCity)) $errors[] = "Billing city is required";
-    if (empty($billingCountry)) $errors[] = "Billing country is required";
-    if (empty($billingZip)) $errors[] = "Billing ZIP code is required";
-    if (empty($shippingMethodId)) $errors[] = "Please select a shipping method";
-    if (empty($paymentProviderId)) $errors[] = "Please select a payment method";
-    
-    if (empty($errors)) {
-        // Calculate shipping cost
-        $shippingCost = calculateCartShipping($cartItems, $shippingMethodId);
-        
-        // Apply coupon if provided
-        $discountAmount = 0;
-        if ($couponCode) {
-            $couponResult = applyCoupon($couponCode, $subtotal);
-            if ($couponResult['success']) {
-                $discountAmount = $couponResult['discount'];
-            }
-        }
-        
-        // Calculate tax
-        $taxAmount = calculateTax($subtotal - $discountAmount);
-        
-        // Calculate total
-        $totalAmount = $subtotal + $shippingCost + $taxAmount - $discountAmount;
-        
-        try {
-            $db->beginTransaction();
-            
-            // Create order
-            $orderNumber = generateOrderNumber();
-            $sessionId = Session::getSessionId();
-            
-            $db->execute(
-                "INSERT INTO orders (
-                    order_number, session_id, customer_name, customer_email, customer_phone,
-                    billing_address, billing_city, billing_state, billing_country, billing_zip,
-                    shipping_address, shipping_city, shipping_state, shipping_country, shipping_zip,
-                    subtotal, tax_amount, shipping_cost, discount_amount, total_amount,
-                    shipping_method_id, payment_provider_id, coupon_code, notes, status, payment_status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')",
-                [
-                    $orderNumber, $sessionId, $customerName, $customerEmail, $customerPhone,
-                    $billingAddress, $billingCity, $billingState, $billingCountry, $billingZip,
-                    $shippingAddress, $shippingCity, $shippingState, $shippingCountry, $shippingZip,
-                    $subtotal, $taxAmount, $shippingCost, $discountAmount, $totalAmount,
-                    $shippingMethodId, $paymentProviderId, $couponCode, $notes
-                ]
-            );
-            
-            $orderId = $db->lastInsertId();
-            
-            // Add order items
-            foreach ($cartItems as $item) {
-                $itemSubtotal = $item['price'] * $item['quantity'];
-                $db->execute(
-                    "INSERT INTO order_items (order_id, product_id, product_name, product_sku, quantity, price, subtotal)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [
-                        $orderId, $item['product_id'], $item['name'], 
-                        $db->fetchOne("SELECT sku FROM products WHERE id = ?", [$item['product_id']])['sku'],
-                        $item['quantity'], $item['price'], $itemSubtotal
-                    ]
-                );
-                
-                // Update product stock
-                $db->execute(
-                    "UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?",
-                    [$item['quantity'], $item['product_id']]
-                );
-            }
-            
-            // Update coupon usage if applied
-            if ($couponCode && isset($couponResult['coupon_id'])) {
-                $db->execute(
-                    "UPDATE discount_coupons SET usage_count = usage_count + 1 WHERE id = ?",
-                    [$couponResult['coupon_id']]
-                );
-            }
-            
-            // Clear cart
-            clearCart();
-            
-            $db->commit();
-            
-            // Store order number in session for success page
-            Session::set('last_order_number', $orderNumber);
-            
-            redirect('?page=checkout-success');
-            
-        } catch (Exception $e) {
-            $db->rollback();
-            $errors[] = "Order processing failed. Please try again.";
-            error_log("Checkout error: " . $e->getMessage());
-        }
-    }
-    
-    if ($errors) {
-        Session::setFlash('error', implode('<br>', $errors));
-    }
-}
 ?>
 
 <div class="checkout-page">
     <div class="container">
         <h1>Checkout</h1>
 
+        <?php if (Session::has('error')): ?>
+            <div class="alert alert-danger">
+                <?php echo Session::get('error'); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (Session::has('success')): ?>
+            <div class="alert alert-success">
+                <?php echo Session::get('success'); ?>
+            </div>
+        <?php endif; ?>
+
         <div class="checkout-content">
             <!-- Checkout Form -->
             <div class="checkout-form-section">
-                <form method="POST" id="checkoutForm">
+                <form method="POST" action="/shop/checkout" id="checkoutForm">
+                    <?php echo csrf_field(); ?>
                     <!-- Customer Information -->
                     <div class="form-section">
                         <h2><i class="fas fa-user"></i> Customer Information</h2>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Full Name *</label>
-                                <input type="text" name="customer_name" required value="<?php echo $_POST['customer_name'] ?? ''; ?>">
+                                <label>First Name *</label>
+                                <input type="text" name="first_name" required value="<?php echo old('first_name'); ?>">
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name *</label>
+                                <input type="text" name="last_name" required value="<?php echo old('last_name'); ?>">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Email Address *</label>
-                                <input type="email" name="customer_email" required value="<?php echo $_POST['customer_email'] ?? ''; ?>">
+                                <input type="email" name="email" required value="<?php echo old('email'); ?>">
                             </div>
                             <div class="form-group">
-                                <label>Phone Number</label>
-                                <input type="tel" name="customer_phone" value="<?php echo $_POST['customer_phone'] ?? ''; ?>">
+                                <label>Phone Number *</label>
+                                <input type="tel" name="phone" required value="<?php echo old('phone'); ?>">
                             </div>
                         </div>
                     </div>
@@ -200,26 +76,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <h2><i class="fas fa-file-invoice"></i> Billing Address</h2>
                         <div class="form-group">
                             <label>Street Address *</label>
-                            <input type="text" name="billing_address" required value="<?php echo $_POST['billing_address'] ?? ''; ?>">
+                            <input type="text" name="address" required value="<?php echo old('address'); ?>">
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>City *</label>
-                                <input type="text" name="billing_city" required value="<?php echo $_POST['billing_city'] ?? ''; ?>">
+                                <input type="text" name="city" required value="<?php echo old('city'); ?>">
                             </div>
                             <div class="form-group">
-                                <label>State/Province</label>
-                                <input type="text" name="billing_state" value="<?php echo $_POST['billing_state'] ?? ''; ?>">
+                                <label>State/Province *</label>
+                                <input type="text" name="state" required value="<?php echo old('state'); ?>">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Country *</label>
-                                <input type="text" name="billing_country" required value="<?php echo $_POST['billing_country'] ?? ''; ?>">
+                                <input type="text" name="country" required value="<?php echo old('country'); ?>">
                             </div>
                             <div class="form-group">
                                 <label>ZIP/Postal Code *</label>
-                                <input type="text" name="billing_zip" required value="<?php echo $_POST['billing_zip'] ?? ''; ?>">
+                                <input type="text" name="zip" required value="<?php echo old('zip'); ?>">
                             </div>
                         </div>
                     </div>

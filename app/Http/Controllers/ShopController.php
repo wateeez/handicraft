@@ -192,10 +192,137 @@ class ShopController extends Controller
             'country' => 'required',
         ]);
         
-        // Process checkout logic here
-        // This would typically create an order, process payment, etc.
+        // Get cart items
+        $cartItems = getCartItems();
         
-        Session::flash('success', 'Order placed successfully!');
-        return redirect()->route('shop.checkout.success');
+        if (empty($cartItems)) {
+            Session::flash('error', 'Your cart is empty');
+            return redirect()->route('shop.cart');
+        }
+        
+        // Calculate totals
+        $subtotal = getCartTotal();
+        $tax = calculateTax($subtotal);
+        
+        // Get shipping charge from selected method
+        $shippingMethodId = $request->input('shipping_method');
+        $shippingCharge = 0;
+        if ($shippingMethodId) {
+            // Calculate cart weight
+            $totalWeight = 0;
+            foreach ($cartItems as $item) {
+                $product = DB::table('products')->where('id', $item['product_id'])->first();
+                if ($product && $product->actual_weight) {
+                    $totalWeight += ($product->actual_weight * $item['quantity']);
+                }
+            }
+            
+            // Get shipping rate based on weight
+            $shippingRate = DB::table('shipping_rates')
+                ->where('shipping_method_id', $shippingMethodId)
+                ->where('min_weight', '<=', $totalWeight)
+                ->where('max_weight', '>=', $totalWeight)
+                ->first();
+            
+            if ($shippingRate) {
+                $shippingCharge = $shippingRate->base_price;
+                // Add weight-based charge if applicable
+                if ($totalWeight > 0) {
+                    $shippingCharge += ($totalWeight * $shippingRate->price_per_kg_actual);
+                }
+            }
+        }
+        
+        $discount = Session::get('discount_amount', 0);
+        $total = $subtotal + $tax + $shippingCharge - $discount;
+        
+        // Get payment provider name
+        $paymentProviderId = $request->input('payment_provider');
+        $paymentMethod = 'Cash on Delivery';
+        if ($paymentProviderId) {
+            $provider = DB::table('payment_providers')
+                ->where('id', $paymentProviderId)
+                ->where('is_active', 1)
+                ->first();
+            if ($provider) {
+                $paymentMethod = $provider->name;
+            }
+        }
+        
+        try {
+            // Generate unique order number
+            $orderNumber = 'ORD-' . strtoupper(uniqid());
+            
+            // Create order
+            $orderId = DB::table('orders')->insertGetId([
+                'order_number' => $orderNumber,
+                'customer_name' => $request->first_name . ' ' . $request->last_name,
+                'customer_email' => $request->email,
+                'customer_phone' => $request->phone,
+                'billing_address' => $request->address,
+                'billing_city' => $request->city,
+                'billing_state' => $request->state,
+                'billing_zip' => $request->zip,
+                'billing_country' => $request->country,
+                'shipping_address' => $request->address,
+                'shipping_city' => $request->city,
+                'shipping_state' => $request->state,
+                'shipping_zip' => $request->zip,
+                'shipping_country' => $request->country,
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax,
+                'shipping_cost' => $shippingCharge,
+                'discount_amount' => $discount,
+                'total_amount' => $total,
+                'shipping_method_id' => $shippingMethodId,
+                'payment_provider_id' => $paymentProviderId,
+                'coupon_code' => Session::get('coupon_code', null),
+                'payment_status' => 'Pending',
+                'status' => 'Pending',
+                'notes' => $request->input('notes', ''),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            
+            // Create order items
+            foreach ($cartItems as $item) {
+                // Get product SKU
+                $product = DB::table('products')->where('id', $item['product_id'])->first();
+                
+                DB::table('order_items')->insert([
+                    'order_id' => $orderId,
+                    'product_id' => $item['product_id'],
+                    'product_name' => $item['name'],
+                    'product_sku' => $product ? $product->sku : '',
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                    'subtotal' => $item['price'] * $item['quantity'],
+                    'created_at' => now(),
+                ]);
+                
+                // Update product stock
+                DB::table('products')
+                    ->where('id', $item['product_id'])
+                    ->decrement('stock_quantity', $item['quantity']);
+            }
+            
+            // Clear cart
+            if (Session::has('user_id')) {
+                DB::table('cart')->where('user_id', Session::get('user_id'))->delete();
+            } else {
+                Session::forget('cart');
+            }
+            
+            // Clear coupon and shipping
+            Session::forget(['coupon_code', 'discount_amount', 'shipping_charge']);
+            
+            Session::flash('success', 'Order placed successfully! Your order number is: ' . $orderNumber);
+            Session::flash('order_number', $orderNumber);
+            return redirect()->route('shop.checkout.success');
+            
+        } catch (\Exception $e) {
+            Session::flash('error', 'Failed to process order: ' . $e->getMessage());
+            return redirect()->back()->withInput();
+        }
     }
 }
