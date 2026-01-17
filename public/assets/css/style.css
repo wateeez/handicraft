@@ -2278,6 +2278,16 @@ body.admin-panel {
 }
 
 
+/* Fix for long text overflow */
+.description-content,
+.product-description,
+p {
+    overflow-wrap: break-word;
+    /* Prevents long words from overflowing */
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .product-detail-content {

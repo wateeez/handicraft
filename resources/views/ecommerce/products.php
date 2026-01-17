@@ -93,13 +93,13 @@ $categories = $db->fetchAll("SELECT * FROM categories WHERE is_active = 1 ORDER 
                     <h3>Categories</h3>
                     <ul class="category-filter">
                         <li>
-                            <a href="?page=products" <?php echo !$categorySlug ? 'class="active"' : ''; ?>>
+                            <a href="/shop/products" <?php echo !$categorySlug ? 'class="active"' : ''; ?>>
                                 All Categories
                             </a>
                         </li>
                         <?php foreach ($categories as $cat): ?>
                             <li>
-                                <a href="?page=products&category=<?php echo $cat['slug']; ?>" 
+                                <a href="/shop/products?category=<?php echo $cat['slug']; ?>" 
                                    <?php echo ($categorySlug === $cat['slug']) ? 'class="active"' : ''; ?>>
                                     <?php echo htmlspecialchars($cat['name']); ?>
                                 </a>
@@ -114,7 +114,7 @@ $categories = $db->fetchAll("SELECT * FROM categories WHERE is_active = 1 ORDER 
                                     <ul class="subcategory-filter">
                                         <?php foreach ($subcats as $subcat): ?>
                                             <li>
-                                                <a href="?page=products&category=<?php echo $cat['slug']; ?>&subcategory=<?php echo $subcat['slug']; ?>"
+                                                <a href="/shop/products?category=<?php echo $cat['slug']; ?>&subcategory=<?php echo $subcat['slug']; ?>"
                                                    <?php echo ($subcategorySlug === $subcat['slug']) ? 'class="active"' : ''; ?>>
                                                     <?php echo htmlspecialchars($subcat['name']); ?>
                                                 </a>
@@ -135,10 +135,10 @@ $categories = $db->fetchAll("SELECT * FROM categories WHERE is_active = 1 ORDER 
                     <div class="sort-options">
                         <label>Sort by:</label>
                         <select id="sortSelect" onchange="window.location.href=this.value">
-                            <option value="?page=products<?php echo $categorySlug ? '&category=' . $categorySlug : ''; ?><?php echo $subcategorySlug ? '&subcategory=' . $subcategorySlug : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>&sort=newest" <?php echo $sortBy === 'newest' ? 'selected' : ''; ?>>Newest</option>
-                            <option value="?page=products<?php echo $categorySlug ? '&category=' . $categorySlug : ''; ?><?php echo $subcategorySlug ? '&subcategory=' . $subcategorySlug : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>&sort=price_low" <?php echo $sortBy === 'price_low' ? 'selected' : ''; ?>>Price: Low to High</option>
-                            <option value="?page=products<?php echo $categorySlug ? '&category=' . $categorySlug : ''; ?><?php echo $subcategorySlug ? '&subcategory=' . $subcategorySlug : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>&sort=price_high" <?php echo $sortBy === 'price_high' ? 'selected' : ''; ?>>Price: High to Low</option>
-                            <option value="?page=products<?php echo $categorySlug ? '&category=' . $categorySlug : ''; ?><?php echo $subcategorySlug ? '&subcategory=' . $subcategorySlug : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>&sort=name" <?php echo $sortBy === 'name' ? 'selected' : ''; ?>>Name</option>
+                            <option value="/shop/products?<?php echo $categorySlug ? 'category=' . $categorySlug . '&' : ''; ?><?php echo $subcategorySlug ? 'subcategory=' . $subcategorySlug . '&' : ''; ?><?php echo $search ? 'search=' . urlencode($search) . '&' : ''; ?>sort=newest" <?php echo $sortBy === 'newest' ? 'selected' : ''; ?>>Newest</option>
+                            <option value="/shop/products?<?php echo $categorySlug ? 'category=' . $categorySlug . '&' : ''; ?><?php echo $subcategorySlug ? 'subcategory=' . $subcategorySlug . '&' : ''; ?><?php echo $search ? 'search=' . urlencode($search) . '&' : ''; ?>sort=price_low" <?php echo $sortBy === 'price_low' ? 'selected' : ''; ?>>Price: Low to High</option>
+                            <option value="/shop/products?<?php echo $categorySlug ? 'category=' . $categorySlug . '&' : ''; ?><?php echo $subcategorySlug ? 'subcategory=' . $subcategorySlug . '&' : ''; ?><?php echo $search ? 'search=' . urlencode($search) . '&' : ''; ?>sort=price_high" <?php echo $sortBy === 'price_high' ? 'selected' : ''; ?>>Price: High to Low</option>
+                            <option value="/shop/products?<?php echo $categorySlug ? 'category=' . $categorySlug . '&' : ''; ?><?php echo $subcategorySlug ? 'subcategory=' . $subcategorySlug . '&' : ''; ?><?php echo $search ? 'search=' . urlencode($search) . '&' : ''; ?>sort=name" <?php echo $sortBy === 'name' ? 'selected' : ''; ?>>Name</option>
                         </select>
                     </div>
                 </div>
@@ -148,7 +148,7 @@ $categories = $db->fetchAll("SELECT * FROM categories WHERE is_active = 1 ORDER 
                     <div class="products-grid">
                         <?php foreach ($products as $product): ?>
                             <div class="product-card">
-                                <a href="?page=product-detail&slug=<?php echo $product['slug']; ?>">
+                                <a href="/shop/product/<?php echo $product['slug']; ?>">
                                     <div class="product-image">
                                         <?php if ($product['image']): ?>
                                             <img src="/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
@@ -192,18 +192,18 @@ $categories = $db->fetchAll("SELECT * FROM categories WHERE is_active = 1 ORDER 
                     <?php if ($pagination['total_pages'] > 1): ?>
                         <div class="pagination">
                             <?php if ($pagination['has_prev']): ?>
-                                <a href="?page=products<?php echo $categorySlug ? '&category=' . $categorySlug : ''; ?><?php echo $subcategorySlug ? '&subcategory=' . $subcategorySlug : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>&sort=<?php echo $sortBy; ?>&p=<?php echo $pagination['current_page'] - 1; ?>" class="page-link">&laquo; Previous</a>
+                                <a href="/shop/products?<?php echo $categorySlug ? 'category=' . $categorySlug . '&' : ''; ?><?php echo $subcategorySlug ? 'subcategory=' . $subcategorySlug . '&' : ''; ?><?php echo $search ? 'search=' . urlencode($search) . '&' : ''; ?>sort=<?php echo $sortBy; ?>&p=<?php echo $pagination['current_page'] - 1; ?>" class="page-link">&laquo; Previous</a>
                             <?php endif; ?>
 
                             <?php for ($i = 1; $i <= $pagination['total_pages']; $i++): ?>
-                                <a href="?page=products<?php echo $categorySlug ? '&category=' . $categorySlug : ''; ?><?php echo $subcategorySlug ? '&subcategory=' . $subcategorySlug : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>&sort=<?php echo $sortBy; ?>&p=<?php echo $i; ?>" 
+                                <a href="/shop/products?<?php echo $categorySlug ? 'category=' . $categorySlug . '&' : ''; ?><?php echo $subcategorySlug ? 'subcategory=' . $subcategorySlug . '&' : ''; ?><?php echo $search ? 'search=' . urlencode($search) . '&' : ''; ?>sort=<?php echo $sortBy; ?>&p=<?php echo $i; ?>" 
                                    class="page-link <?php echo $i === $pagination['current_page'] ? 'active' : ''; ?>">
                                     <?php echo $i; ?>
                                 </a>
                             <?php endfor; ?>
 
                             <?php if ($pagination['has_next']): ?>
-                                <a href="?page=products<?php echo $categorySlug ? '&category=' . $categorySlug : ''; ?><?php echo $subcategorySlug ? '&subcategory=' . $subcategorySlug : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>&sort=<?php echo $sortBy; ?>&p=<?php echo $pagination['current_page'] + 1; ?>" class="page-link">Next &raquo;</a>
+                                <a href="/shop/products?<?php echo $categorySlug ? 'category=' . $categorySlug . '&' : ''; ?><?php echo $subcategorySlug ? 'subcategory=' . $subcategorySlug . '&' : ''; ?><?php echo $search ? 'search=' . urlencode($search) . '&' : ''; ?>sort=<?php echo $sortBy; ?>&p=<?php echo $pagination['current_page'] + 1; ?>" class="page-link">Next &raquo;</a>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
