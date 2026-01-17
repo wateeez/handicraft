@@ -14,7 +14,7 @@ class AdminController extends Controller
         if (Session::has('admin_id')) {
             return redirect()->route('admin.dashboard');
         }
-        
+
         ob_start();
         include resource_path('views/admin/login.php');
         $content = ob_get_clean();
@@ -24,18 +24,18 @@ class AdminController extends Controller
     public function loginPost(Request $request)
     {
         require_once app_path('Helpers/functions.php');
-        
+
         $username = $request->input('username');
         $password = $request->input('password');
-        
+
         $admin = DB::table('admin_users')
-            ->where(function($query) use ($username) {
+            ->where(function ($query) use ($username) {
                 $query->where('username', $username)
-                      ->orWhere('email', $username);
+                    ->orWhere('email', $username);
             })
             ->where('is_active', 1)
             ->first();
-        
+
         if ($admin && Hash::check($password, $admin->password)) {
             Session::put('admin_id', $admin->id);
             Session::put('admin_name', $admin->full_name);
@@ -43,7 +43,7 @@ class AdminController extends Controller
             Session::flash('success', 'Welcome back, ' . $admin->full_name);
             return redirect()->route('admin.dashboard');
         }
-        
+
         Session::flash('error', 'Invalid credentials');
         return redirect()->route('admin.login');
     }
@@ -57,7 +57,7 @@ class AdminController extends Controller
     public function dashboard()
     {
         $this->requireLogin();
-        
+
         // Get dashboard statistics
         $data = [
             'total_orders' => DB::table('orders')->count(),
@@ -66,7 +66,7 @@ class AdminController extends Controller
             'recent_orders' => DB::table('orders')->orderBy('created_at', 'DESC')->limit(10)->get(),
             'low_stock_products' => DB::table('products')->where('stock_quantity', '<=', 10)->where('stock_quantity', '>', 0)->get()
         ];
-        
+
         return $this->renderAdminPage('dashboard', $data);
     }
 
@@ -105,18 +105,18 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         require_once app_path('Helpers/functions.php');
-        
+
         $name = $request->input('name');
         $slug = $request->input('slug');
         $description = $request->input('description');
         $display_order = $request->input('display_order', 0);
         $is_active = $request->has('is_active') ? 1 : 0;
-        
+
         // Auto-generate slug if not provided
         if (empty($slug)) {
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name)));
         }
-        
+
         // Handle image upload
         $image = null;
         if ($request->hasFile('image')) {
@@ -125,7 +125,7 @@ class AdminController extends Controller
             $file->move(public_path('uploads/categories'), $filename);
             $image = 'uploads/categories/' . $filename;
         }
-        
+
         DB::table('categories')->insert([
             'name' => $name,
             'slug' => $slug,
@@ -136,7 +136,7 @@ class AdminController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
-        
+
         Session::flash('success', 'Category added successfully');
         return redirect()->route('admin.categories');
     }
@@ -145,9 +145,9 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         $id = $request->input('id');
-        
+
         DB::table('categories')->where('id', $id)->delete();
-        
+
         Session::flash('success', 'Category deleted successfully');
         return redirect()->route('admin.categories');
     }
@@ -155,19 +155,19 @@ class AdminController extends Controller
     public function addSubcategory(Request $request)
     {
         $this->requireLogin();
-        
+
         $category_id = $request->input('category_id');
         $name = $request->input('name');
         $slug = $request->input('slug');
         $description = $request->input('description');
         $display_order = $request->input('display_order', 0);
         $is_active = $request->has('is_active') ? 1 : 0;
-        
+
         // Auto-generate slug if not provided
         if (empty($slug)) {
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name)));
         }
-        
+
         DB::table('subcategories')->insert([
             'category_id' => $category_id,
             'name' => $name,
@@ -178,7 +178,7 @@ class AdminController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
-        
+
         Session::flash('success', 'Subcategory added successfully');
         return redirect()->route('admin.categories');
     }
@@ -187,9 +187,9 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         $id = $request->input('id');
-        
+
         DB::table('subcategories')->where('id', $id)->delete();
-        
+
         Session::flash('success', 'Subcategory deleted successfully');
         return redirect()->route('admin.categories');
     }
@@ -198,11 +198,11 @@ class AdminController extends Controller
     public function addShippingZone(Request $request)
     {
         $this->requireLogin();
-        
+
         $name = $request->input('name');
         $countries = $request->input('countries');
         $is_active = $request->input('is_active', 1);
-        
+
         DB::table('shipping_zones')->insert([
             'name' => $name,
             'countries' => $countries,
@@ -210,7 +210,7 @@ class AdminController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
-        
+
         Session::flash('success', 'Shipping zone added successfully');
         return redirect()->route('admin.shipping');
     }
@@ -219,9 +219,9 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         $id = $request->input('id');
-        
+
         DB::table('shipping_zones')->where('id', $id)->delete();
-        
+
         Session::flash('success', 'Shipping zone deleted successfully');
         return redirect()->route('admin.shipping');
     }
@@ -229,14 +229,14 @@ class AdminController extends Controller
     public function addShippingRate(Request $request)
     {
         $this->requireLogin();
-        
+
         $zone_id = $request->input('zone_id');
         $name = $request->input('name');
         $min_weight = $request->input('min_weight');
         $max_weight = $request->input('max_weight');
         $rate = $request->input('rate');
         $is_active = $request->input('is_active', 1);
-        
+
         DB::table('shipping_rates')->insert([
             'zone_id' => $zone_id,
             'name' => $name,
@@ -247,7 +247,7 @@ class AdminController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
-        
+
         Session::flash('success', 'Shipping rate added successfully');
         return redirect()->route('admin.shipping');
     }
@@ -256,9 +256,9 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         $id = $request->input('id');
-        
+
         DB::table('shipping_rates')->where('id', $id)->delete();
-        
+
         Session::flash('success', 'Shipping rate deleted successfully');
         return redirect()->route('admin.shipping');
     }
@@ -268,7 +268,7 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         require_once app_path('Helpers/functions.php');
-        
+
         $name = $request->input('name');
         $slug = $request->input('slug');
         $sku = $request->input('sku');
@@ -286,12 +286,12 @@ class AdminController extends Controller
         $height = $request->input('height');
         $is_featured = $request->has('is_featured') ? 1 : 0;
         $is_active = $request->has('is_active') ? 1 : 0;
-        
+
         // Auto-generate slug if not provided
         if (empty($slug)) {
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name)));
         }
-        
+
         // Ensure slug is unique
         $originalSlug = $slug;
         $counter = 1;
@@ -299,7 +299,7 @@ class AdminController extends Controller
             $slug = $originalSlug . '-' . $counter;
             $counter++;
         }
-        
+
         // Ensure SKU is unique
         $originalSku = $sku;
         $skuCounter = 1;
@@ -307,17 +307,17 @@ class AdminController extends Controller
             $sku = $originalSku . '-' . $skuCounter;
             $skuCounter++;
         }
-        
+
         // Validate that at least one image is uploaded
         if (!$request->hasFile('images')) {
             Session::flash('error', 'Please upload at least one product image');
             return redirect()->back()->withInput();
         }
-        
+
         // Handle multiple image uploads
         $primaryImage = null;
         $uploadedImages = [];
-        
+
         if ($request->hasFile('images')) {
             $files = $request->file('images');
             foreach ($files as $index => $file) {
@@ -326,7 +326,7 @@ class AdminController extends Controller
                     $file->move(public_path('uploads/products'), $filename);
                     $imagePath = 'uploads/products/' . $filename;
                     $uploadedImages[] = $imagePath;
-                    
+
                     // Set first image as primary
                     if ($index === 0) {
                         $primaryImage = $imagePath;
@@ -334,7 +334,7 @@ class AdminController extends Controller
                 }
             }
         }
-        
+
         // Insert product
         $productId = DB::table('products')->insertGetId([
             'name' => $name,
@@ -357,7 +357,7 @@ class AdminController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
-        
+
         // Insert product images
         foreach ($uploadedImages as $index => $imagePath) {
             DB::table('product_images')->insert([
@@ -368,7 +368,7 @@ class AdminController extends Controller
                 'created_at' => now()
             ]);
         }
-        
+
         Session::flash('success', 'Product added successfully with ' . count($uploadedImages) . ' image(s)');
         return redirect()->route('admin.products');
     }
@@ -377,7 +377,7 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         $id = $request->input('id');
-        
+
         $data = [
             'name' => $request->input('name'),
             'slug' => $request->input('slug'),
@@ -398,12 +398,12 @@ class AdminController extends Controller
             'is_active' => $request->has('is_active') ? 1 : 0,
             'updated_at' => now()
         ];
-        
+
         // Handle multiple image uploads
         if ($request->hasFile('images')) {
             $files = $request->file('images');
             $uploadedImages = [];
-            
+
             foreach ($files as $index => $file) {
                 if ($file->isValid()) {
                     $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
@@ -412,14 +412,14 @@ class AdminController extends Controller
                     $uploadedImages[] = $imagePath;
                 }
             }
-            
+
             // Insert new product images
             foreach ($uploadedImages as $index => $imagePath) {
                 // Check if this is the first image across all product images
                 $existingCount = DB::table('product_images')
                     ->where('product_id', $id)
                     ->count();
-                    
+
                 DB::table('product_images')->insert([
                     'product_id' => $id,
                     'image_path' => $imagePath,
@@ -429,9 +429,9 @@ class AdminController extends Controller
                 ]);
             }
         }
-        
+
         DB::table('products')->where('id', $id)->update($data);
-        
+
         Session::flash('success', 'Product updated successfully');
         return redirect()->route('admin.products');
     }
@@ -440,9 +440,9 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         $id = $request->input('id');
-        
+
         DB::table('products')->where('id', $id)->delete();
-        
+
         Session::flash('success', 'Product deleted successfully');
         return redirect()->route('admin.products');
     }
@@ -451,29 +451,29 @@ class AdminController extends Controller
     {
         $this->requireLogin();
         require_once app_path('Helpers/functions.php');
-        
+
         if (!$request->hasFile('csv_file')) {
             Session::flash('error', 'Please select a CSV file');
             return redirect()->route('admin.products.bulk');
         }
-        
+
         $file = $request->file('csv_file');
         $path = $file->getRealPath();
-        
+
         $csv = array_map('str_getcsv', file($path));
         $headers = array_shift($csv);
-        
+
         $imported = 0;
         $errors = [];
-        
+
         foreach ($csv as $index => $row) {
             if (count($row) != count($headers)) {
                 $errors[] = "Row " . ($index + 2) . ": Invalid column count";
                 continue;
             }
-            
+
             $data = array_combine($headers, $row);
-            
+
             try {
                 DB::table('products')->insert([
                     'name' => $data['name'] ?? '',
@@ -501,48 +501,63 @@ class AdminController extends Controller
                 $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
             }
         }
-        
+
         if ($imported > 0) {
             Session::flash('success', "Successfully imported {$imported} products");
         }
-        
+
         if (!empty($errors)) {
             Session::flash('error', implode('<br>', array_slice($errors, 0, 10)));
         }
-        
+
         return redirect()->route('admin.products.bulk');
     }
 
     public function editProduct($id)
     {
         $this->requireLogin();
-        
+
         // Set the ID in GET array for the legacy view to access
         $_GET['id'] = $id;
-        
+
         return $this->renderAdminPage('edit-product');
     }
 
     public function exportProducts()
     {
         $this->requireLogin();
-        
+
         $products = DB::table('products')->get();
-        
+
         $filename = 'products_export_' . date('Y-m-d_His') . '.csv';
-        
+
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
-        
+
         $output = fopen('php://output', 'w');
-        
+
         // Headers
         fputcsv($output, [
-            'id', 'name', 'slug', 'sku', 'category_id', 'subcategory_id',
-            'description', 'short_description', 'price', 'compare_price', 'cost_price',
-            'stock', 'weight', 'length', 'width', 'height', 'is_featured', 'is_active'
+            'id',
+            'name',
+            'slug',
+            'sku',
+            'category_id',
+            'subcategory_id',
+            'description',
+            'short_description',
+            'price',
+            'compare_price',
+            'cost_price',
+            'stock',
+            'weight',
+            'length',
+            'width',
+            'height',
+            'is_featured',
+            'is_active'
         ]);
-        
+
         // Data
         foreach ($products as $product) {
             fputcsv($output, [
@@ -566,7 +581,7 @@ class AdminController extends Controller
                 $product->is_active
             ]);
         }
-        
+
         fclose($output);
         exit;
     }
@@ -574,19 +589,33 @@ class AdminController extends Controller
     public function downloadTemplate()
     {
         $filename = 'product_import_template.csv';
-        
+
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
-        
+
         $output = fopen('php://output', 'w');
-        
+
         // Headers
         fputcsv($output, [
-            'name', 'slug', 'sku', 'category_id', 'subcategory_id',
-            'description', 'short_description', 'price', 'compare_price', 'cost_price',
-            'stock', 'weight', 'length', 'width', 'height', 'is_featured', 'is_active'
+            'name',
+            'slug',
+            'sku',
+            'category_id',
+            'subcategory_id',
+            'description',
+            'short_description',
+            'price',
+            'compare_price',
+            'cost_price',
+            'stock',
+            'weight',
+            'length',
+            'width',
+            'height',
+            'is_featured',
+            'is_active'
         ]);
-        
+
         // Sample row
         fputcsv($output, [
             'Sample Product',
@@ -607,7 +636,7 @@ class AdminController extends Controller
             '0',
             '1'
         ]);
-        
+
         fclose($output);
         exit;
     }
@@ -615,75 +644,75 @@ class AdminController extends Controller
     public function getSubcategories(Request $request)
     {
         $categoryId = $request->input('category_id');
-        
+
         $subcategories = DB::table('subcategories')
             ->where('category_id', $categoryId)
             ->where('is_active', 1)
             ->get();
-        
+
         return response()->json($subcategories);
     }
 
     public function orders(Request $request)
     {
         $this->requireLogin();
-        
+
         // Get filters
         $statusFilter = $request->input('status', '');
         $search = $request->input('search', '');
-        
+
         // Build query
         $query = DB::table('orders');
-        
+
         if ($statusFilter) {
             $query->where('status', $statusFilter);
         }
-        
+
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'LIKE', "%$search%")
-                  ->orWhere('customer_name', 'LIKE', "%$search%")
-                  ->orWhere('customer_email', 'LIKE', "%$search%");
+                    ->orWhere('customer_name', 'LIKE', "%$search%")
+                    ->orWhere('customer_email', 'LIKE', "%$search%");
             });
         }
-        
+
         $orders = $query->orderBy('created_at', 'DESC')->get();
-        
+
         // Get order items count for each order
         foreach ($orders as $order) {
             $order->items_count = DB::table('order_items')
                 ->where('order_id', $order->id)
                 ->sum('quantity');
         }
-        
+
         $data = [
             'orders' => $orders,
             'status_filter' => $statusFilter,
             'search' => $search
         ];
-        
+
         return $this->renderAdminPage('orders', $data);
     }
 
     public function orderDetail($id)
     {
         $this->requireLogin();
-        
+
         // Get order
         $order = DB::table('orders')->where('id', $id)->first();
-        
+
         if (!$order) {
             Session::flash('error', 'Order not found');
             return redirect()->route('admin.orders');
         }
-        
+
         // Get order items with product details
         $orderItems = DB::table('order_items as oi')
             ->leftJoin('products as p', 'oi.product_id', '=', 'p.id')
             ->select('oi.*', 'p.name as product_name')
             ->where('oi.order_id', $id)
             ->get();
-        
+
         // Get product images for order items
         foreach ($orderItems as $item) {
             if ($item->product_id) {
@@ -694,7 +723,7 @@ class AdminController extends Controller
                 $item->image = $image ? $image->image_path : null;
             }
         }
-        
+
         // Get payment provider name
         if ($order->payment_provider_id) {
             $provider = DB::table('payment_providers')->where('id', $order->payment_provider_id)->first();
@@ -702,7 +731,7 @@ class AdminController extends Controller
         } else {
             $order->payment_method = 'N/A';
         }
-        
+
         // Get shipping method name
         if ($order->shipping_method_id) {
             $shippingMethod = DB::table('shipping_methods')->where('id', $order->shipping_method_id)->first();
@@ -710,31 +739,127 @@ class AdminController extends Controller
         } else {
             $order->shipping_method = 'N/A';
         }
-        
+
         $data = [
             'order' => $order,
             'orderItems' => $orderItems
         ];
-        
+
         return $this->renderAdminPage('order-detail', $data);
     }
 
     public function updateOrderStatus(Request $request)
     {
         $this->requireLogin();
-        
+
         $orderId = $request->input('order_id');
         $status = $request->input('status');
-        
+
         DB::table('orders')
             ->where('id', $orderId)
             ->update([
                 'status' => $status,
                 'updated_at' => now()
             ]);
-        
+
         Session::flash('success', 'Order status updated successfully');
         return redirect()->route('admin.orders.detail', $orderId);
+    }
+
+    public function updatePaymentStatus(Request $request)
+    {
+        $this->requireLogin();
+
+        $orderId = $request->input('order_id');
+        $paymentStatus = $request->input('payment_status');
+
+        DB::table('orders')
+            ->where('id', $orderId)
+            ->update([
+                'payment_status' => $paymentStatus,
+                'updated_at' => now()
+            ]);
+
+        Session::flash('success', 'Payment status updated to ' . $paymentStatus);
+        return redirect()->route('admin.orders.detail', $orderId);
+    }
+
+    public function billing(Request $request)
+    {
+        $this->requireLogin();
+        return $this->renderAdminPage('billing');
+    }
+
+    public function exportBilling()
+    {
+        $this->requireLogin();
+
+        $orders = DB::table('orders')->orderBy('created_at', 'DESC')->get();
+
+        $filename = 'billing_report_' . date('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        $output = fopen('php://temp', 'r+');
+
+        // Add BOM for Excel UTF-8 compatibility
+        fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+        // Headers
+        fputcsv($output, [
+            'Order Number',
+            'Order Date',
+            'Customer Name',
+            'Customer Email',
+            'Customer Phone',
+            'Order Status',
+            'Payment Status',
+            'Subtotal',
+            'Tax Amount',
+            'Shipping Cost',
+            'Discount Amount',
+            'Total Amount',
+            'Shipping Address',
+            'Shipping City',
+            'Shipping State',
+            'Shipping Zip',
+            'Shipping Country'
+        ]);
+
+        // Data
+        foreach ($orders as $order) {
+            fputcsv($output, [
+                $order->order_number,
+                $order->created_at,
+                $order->customer_name,
+                $order->customer_email,
+                $order->customer_phone ?? '',
+                $order->status,
+                $order->payment_status ?? 'Unpaid',
+                $order->subtotal ?? 0,
+                $order->tax_amount ?? 0,
+                $order->shipping_cost ?? 0,
+                $order->discount_amount ?? 0,
+                $order->total_amount,
+                $order->shipping_address ?? '',
+                $order->shipping_city ?? '',
+                $order->shipping_state ?? '',
+                $order->shipping_zip ?? '',
+                $order->shipping_country ?? ''
+            ]);
+        }
+
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+
+        return response($csv, 200, $headers);
     }
 
     private function requireLogin()
@@ -748,41 +873,46 @@ class AdminController extends Controller
     private function renderAdminPage($page, $data = [])
     {
         require_once app_path('Helpers/functions.php');
-        
+
         // Extract data for the view
         extract($data);
-        
+
         // Create a database wrapper for legacy views
         $db = new class {
-            public function fetchAll($sql, $params = []) {
+            public function fetchAll($sql, $params = [])
+            {
                 $results = DB::select($sql, $params);
-                return array_map(function($item) {
+                return array_map(function ($item) {
                     return (array) $item;
                 }, $results);
             }
-            
-            public function fetchOne($sql, $params = []) {
+
+            public function fetchOne($sql, $params = [])
+            {
                 $result = DB::select($sql, $params);
                 return !empty($result) ? (array) $result[0] : false;
             }
-            
-            public function query($sql, $params = []) {
+
+            public function query($sql, $params = [])
+            {
                 return DB::statement($sql, $params);
             }
-            
-            public function execute($sql, $params = []) {
+
+            public function execute($sql, $params = [])
+            {
                 return DB::statement($sql, $params);
             }
-            
-            public function lastInsertId() {
+
+            public function lastInsertId()
+            {
                 return DB::getPdo()->lastInsertId();
             }
         };
-        
+
         ob_start();
         include resource_path("views/admin/{$page}.php");
         $content = ob_get_clean();
-        
+
         return response($content);
     }
 }

@@ -2277,6 +2277,244 @@ body.admin-panel {
     color: white;
 }
 
+/* Order Status Badges */
+.badge-pending {
+    background-color: #f39c12;
+    color: white;
+}
+
+.badge-processing {
+    background-color: #3498db;
+    color: white;
+}
+
+.badge-shipped {
+    background-color: #9b59b6;
+    color: white;
+}
+
+.badge-delivered {
+    background-color: #27ae60;
+    color: white;
+}
+
+.badge-cancelled {
+    background-color: #c0392b;
+    color: white;
+}
+
+.badge-paid {
+    background-color: #27ae60;
+    color: white;
+}
+
+.badge-unpaid {
+    background-color: #e74c3c;
+    color: white;
+}
+
+/* === Admin Dashboard === */
+.dashboard {
+    padding: 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-icon.blue {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.stat-icon.green {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+}
+
+.stat-icon.orange {
+    background: linear-gradient(135deg, #f39c12, #d68910);
+}
+
+.stat-icon.purple {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.stat-icon.red {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.stat-info h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.stat-info p {
+    font-size: 0.9rem;
+    color: var(--color-text-sub);
+    margin: 0.25rem 0 0 0;
+}
+
+.dashboard-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+    margin-bottom: 2rem;
+}
+
+.dashboard-section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+    margin: 0 0 1.25rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.dashboard-section .btn-secondary {
+    margin-top: 1rem;
+}
+
+/* Order Status Tabs */
+.status-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+}
+
+.status-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.status-tab:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.status-tab-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: white;
+}
+
+.status-tab.all .status-tab-icon {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.status-tab.pending .status-tab-icon {
+    background: linear-gradient(135deg, #f39c12, #d68910);
+}
+
+.status-tab.processing .status-tab-icon {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.status-tab.shipped .status-tab-icon {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.status-tab.delivered .status-tab-icon {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+}
+
+.status-tab.cancelled .status-tab-icon {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.status-tab.all:hover {
+    border-color: #3498db;
+    background: rgba(52, 152, 219, 0.1);
+}
+
+.status-tab.pending:hover {
+    border-color: #f39c12;
+    background: rgba(243, 156, 18, 0.1);
+}
+
+.status-tab.processing:hover {
+    border-color: #3498db;
+    background: rgba(52, 152, 219, 0.1);
+}
+
+.status-tab.shipped:hover {
+    border-color: #9b59b6;
+    background: rgba(155, 89, 182, 0.1);
+}
+
+.status-tab.delivered:hover {
+    border-color: #27ae60;
+    background: rgba(39, 174, 96, 0.1);
+}
+
+.status-tab.cancelled:hover {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.status-tab-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.status-tab-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    line-height: 1;
+}
+
+.status-tab-label {
+    font-size: 0.8rem;
+    color: var(--color-text-sub);
+    margin-top: 0.25rem;
+}
 
 /* Fix for long text overflow */
 .description-content,

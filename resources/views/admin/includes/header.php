@@ -35,6 +35,13 @@ $currentPage = request()->segment(2) ?? 'dashboard';
             <a href="/admin/categories" class="<?php echo $currentPage === 'categories' ? 'active' : ''; ?>">
                 <i class="fas fa-tags"></i> Categories
             </a>
+            <a href="/admin/orders"
+                class="<?php echo $currentPage === 'orders' || $currentPage === 'order-detail' ? 'active' : ''; ?>">
+                <i class="fas fa-shopping-cart"></i> Orders
+            </a>
+            <a href="/admin/billing" class="<?php echo $currentPage === 'billing' ? 'active' : ''; ?>">
+                <i class="fas fa-file-invoice-dollar"></i> Billing
+            </a>
             <a href="/admin/shipping" class="<?php echo $currentPage === 'shipping' ? 'active' : ''; ?>">
                 <i class="fas fa-truck"></i> Shipping
             </a>

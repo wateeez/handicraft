@@ -51,7 +51,8 @@ $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name ASC");
     <div class="page-actions">
         <div class="search-filter">
             <form method="GET" class="search-form">
-                <input type="text" name="search" placeholder="Search products..." value="<?php echo htmlspecialchars($search); ?>">
+                <input type="text" name="search" placeholder="Search products..."
+                    value="<?php echo htmlspecialchars($search); ?>">
                 <select name="category">
                     <option value="">All Categories</option>
                     <?php foreach ($categories as $cat): ?>
@@ -98,7 +99,7 @@ $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name ASC");
                         <tr>
                             <td>
                                 <?php if ($product['image']): ?>
-                                    <img src="/uploads/<?php echo htmlspecialchars($product['image']); ?>" alt="" class="table-image">
+                                    <img src="/<?php echo htmlspecialchars($product['image']); ?>" alt="" class="table-image">
                                 <?php else: ?>
                                     <div class="image-placeholder-small">
                                         <i class="fas fa-image"></i>
@@ -136,7 +137,8 @@ $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name ASC");
                                 <a href="/admin/products/edit/<?php echo $product['id']; ?>" class="btn btn-sm btn-primary">
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
-                                <form method="POST" action="/admin/products/delete" style="display:inline;" onsubmit="return confirm('Delete this product?');">
+                                <form method="POST" action="/admin/products/delete" style="display:inline;"
+                                    onsubmit="return confirm('Delete this product?');">
                                     <?php echo csrf_field(); ?>
                                     <input type="hidden" name="id" value="<?php echo $product['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-danger">
@@ -159,18 +161,20 @@ $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name ASC");
     <?php if ($pagination['total_pages'] > 1): ?>
         <div class="pagination">
             <?php if ($pagination['has_prev']): ?>
-                <a href="?<?php echo http_build_query(array_merge($_GET, ['p' => $pagination['current_page'] - 1])); ?>" class="page-link">&laquo; Previous</a>
+                <a href="?<?php echo http_build_query(array_merge($_GET, ['p' => $pagination['current_page'] - 1])); ?>"
+                    class="page-link">&laquo; Previous</a>
             <?php endif; ?>
 
             <?php for ($i = 1; $i <= $pagination['total_pages']; $i++): ?>
-                <a href="?<?php echo http_build_query(array_merge($_GET, ['p' => $i])); ?>" 
-                   class="page-link <?php echo $i === $pagination['current_page'] ? 'active' : ''; ?>">
+                <a href="?<?php echo http_build_query(array_merge($_GET, ['p' => $i])); ?>"
+                    class="page-link <?php echo $i === $pagination['current_page'] ? 'active' : ''; ?>">
                     <?php echo $i; ?>
                 </a>
             <?php endfor; ?>
 
             <?php if ($pagination['has_next']): ?>
-                <a href="?<?php echo http_build_query(array_merge($_GET, ['p' => $pagination['current_page'] + 1])); ?>" class="page-link">Next &raquo;</a>
+                <a href="?<?php echo http_build_query(array_merge($_GET, ['p' => $pagination['current_page'] + 1])); ?>"
+                    class="page-link">Next &raquo;</a>
             <?php endif; ?>
         </div>
     <?php endif; ?>

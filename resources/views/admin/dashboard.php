@@ -53,9 +53,69 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 
+    <!-- Order Status Quick Filters -->
+    <div class="dashboard-section">
+        <h2><i class="fas fa-filter"></i> Orders by Status</h2>
+        <?php
+        // Get order counts by status
+        $order_counts = [
+            'all' => \Illuminate\Support\Facades\DB::table('orders')->count(),
+            'pending' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Pending')->count(),
+            'processing' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Processing')->count(),
+            'shipped' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Shipped')->count(),
+            'delivered' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Delivered')->count(),
+            'cancelled' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Cancelled')->count(),
+        ];
+        ?>
+        <div class="status-tabs">
+            <a href="/admin/orders" class="status-tab all">
+                <div class="status-tab-icon"><i class="fas fa-list"></i></div>
+                <div class="status-tab-info">
+                    <span class="status-tab-count"><?php echo $order_counts['all']; ?></span>
+                    <span class="status-tab-label">All Orders</span>
+                </div>
+            </a>
+            <a href="/admin/orders?status=Pending" class="status-tab pending">
+                <div class="status-tab-icon"><i class="fas fa-clock"></i></div>
+                <div class="status-tab-info">
+                    <span class="status-tab-count"><?php echo $order_counts['pending']; ?></span>
+                    <span class="status-tab-label">Pending</span>
+                </div>
+            </a>
+            <a href="/admin/orders?status=Processing" class="status-tab processing">
+                <div class="status-tab-icon"><i class="fas fa-cog"></i></div>
+                <div class="status-tab-info">
+                    <span class="status-tab-count"><?php echo $order_counts['processing']; ?></span>
+                    <span class="status-tab-label">Processing</span>
+                </div>
+            </a>
+            <a href="/admin/orders?status=Shipped" class="status-tab shipped">
+                <div class="status-tab-icon"><i class="fas fa-truck"></i></div>
+                <div class="status-tab-info">
+                    <span class="status-tab-count"><?php echo $order_counts['shipped']; ?></span>
+                    <span class="status-tab-label">Shipped</span>
+                </div>
+            </a>
+            <a href="/admin/orders?status=Delivered" class="status-tab delivered">
+                <div class="status-tab-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="status-tab-info">
+                    <span class="status-tab-count"><?php echo $order_counts['delivered']; ?></span>
+                    <span class="status-tab-label">Delivered</span>
+                </div>
+            </a>
+            <a href="/admin/orders?status=Cancelled" class="status-tab cancelled">
+                <div class="status-tab-icon"><i class="fas fa-times-circle"></i></div>
+                <div class="status-tab-info">
+                    <span class="status-tab-count"><?php echo $order_counts['cancelled']; ?></span>
+                    <span class="status-tab-label">Cancelled</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
     <!-- Recent Orders -->
     <div class="dashboard-section">
-        <h2>Recent Orders</h2>
+        <h2><i class="fas fa-shopping-bag"></i> Recent Orders</h2>
         <div class="table-responsive">
             <table class="data-table">
                 <thead>
@@ -72,25 +132,31 @@ include __DIR__ . '/includes/header.php';
                     <?php if (!empty($recent_orders) && count($recent_orders) > 0): ?>
                         <?php foreach ($recent_orders as $order): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($order->order_number); ?></td>
+                                <td>#<?php echo htmlspecialchars($order->order_number); ?></td>
                                 <td><?php echo htmlspecialchars($order->customer_name); ?></td>
                                 <td><?php echo date('M d, Y', strtotime($order->created_at)); ?></td>
-                                <td><?php echo formatPrice($order->total_amount); ?></td>
-                                <td><span class="badge badge-<?php echo strtolower($order->status); ?>"><?php echo ucfirst($order->status); ?></span></td>
+                                <td style="font-weight:600;"><?php echo formatPrice($order->total_amount); ?></td>
+                                <td><span
+                                        class="badge badge-<?php echo strtolower($order->status); ?>"><?php echo ucfirst($order->status); ?></span>
+                                </td>
                                 <td>
-                                    <a href="/admin/orders/<?php echo $order->id; ?>" class="btn btn-sm">View</a>
+                                    <a href="/admin/orders/<?php echo $order->id; ?>" class="btn btn-sm btn-info"><i
+                                            class="fas fa-eye"></i> View</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="text-center">No orders yet</td>
+                            <td colspan="6" class="text-center" style="padding:2rem; color:var(--color-text-sub);">
+                                <i class="fas fa-inbox" style="font-size:2rem; margin-bottom:0.5rem; display:block;"></i>
+                                No orders yet
+                            </td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
-        <a href="/admin/orders" class="btn btn-secondary">View All Orders</a>
+        <a href="/admin/orders" class="btn btn-secondary"><i class="fas fa-list"></i> View All Orders</a>
     </div>
 
     <!-- Low Stock Products -->
@@ -114,7 +180,8 @@ include __DIR__ . '/includes/header.php';
                                 <td><?php echo htmlspecialchars($product->sku ?? 'N/A'); ?></td>
                                 <td><span class="badge badge-danger"><?php echo $product->stock_quantity; ?></span></td>
                                 <td>
-                                    <a href="/admin/products/edit/<?php echo $product->id; ?>" class="btn btn-sm">Update Stock</a>
+                                    <a href="/admin/products/edit/<?php echo $product->id; ?>" class="btn btn-sm">Update
+                                        Stock</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
