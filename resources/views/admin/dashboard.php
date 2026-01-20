@@ -60,11 +60,11 @@ include __DIR__ . '/includes/header.php';
         // Get order counts by status
         $order_counts = [
             'all' => \Illuminate\Support\Facades\DB::table('orders')->count(),
-            'pending' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Pending')->count(),
-            'processing' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Processing')->count(),
-            'shipped' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Shipped')->count(),
-            'delivered' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Delivered')->count(),
-            'cancelled' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'Cancelled')->count(),
+            'pending' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'pending')->count(),
+            'processing' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'processing')->count(),
+            'shipped' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'shipped')->count(),
+            'delivered' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'delivered')->count(),
+            'cancelled' => \Illuminate\Support\Facades\DB::table('orders')->where('status', 'cancelled')->count(),
         ];
         ?>
         <div class="status-tabs">
@@ -75,35 +75,35 @@ include __DIR__ . '/includes/header.php';
                     <span class="status-tab-label">All Orders</span>
                 </div>
             </a>
-            <a href="/admin/orders?status=Pending" class="status-tab pending">
+            <a href="/admin/orders?status=pending" class="status-tab pending">
                 <div class="status-tab-icon"><i class="fas fa-clock"></i></div>
                 <div class="status-tab-info">
                     <span class="status-tab-count"><?php echo $order_counts['pending']; ?></span>
                     <span class="status-tab-label">Pending</span>
                 </div>
             </a>
-            <a href="/admin/orders?status=Processing" class="status-tab processing">
+            <a href="/admin/orders?status=processing" class="status-tab processing">
                 <div class="status-tab-icon"><i class="fas fa-cog"></i></div>
                 <div class="status-tab-info">
                     <span class="status-tab-count"><?php echo $order_counts['processing']; ?></span>
                     <span class="status-tab-label">Processing</span>
                 </div>
             </a>
-            <a href="/admin/orders?status=Shipped" class="status-tab shipped">
+            <a href="/admin/orders?status=shipped" class="status-tab shipped">
                 <div class="status-tab-icon"><i class="fas fa-truck"></i></div>
                 <div class="status-tab-info">
                     <span class="status-tab-count"><?php echo $order_counts['shipped']; ?></span>
                     <span class="status-tab-label">Shipped</span>
                 </div>
             </a>
-            <a href="/admin/orders?status=Delivered" class="status-tab delivered">
+            <a href="/admin/orders?status=delivered" class="status-tab delivered">
                 <div class="status-tab-icon"><i class="fas fa-check-circle"></i></div>
                 <div class="status-tab-info">
                     <span class="status-tab-count"><?php echo $order_counts['delivered']; ?></span>
                     <span class="status-tab-label">Delivered</span>
                 </div>
             </a>
-            <a href="/admin/orders?status=Cancelled" class="status-tab cancelled">
+            <a href="/admin/orders?status=cancelled" class="status-tab cancelled">
                 <div class="status-tab-icon"><i class="fas fa-times-circle"></i></div>
                 <div class="status-tab-info">
                     <span class="status-tab-count"><?php echo $order_counts['cancelled']; ?></span>

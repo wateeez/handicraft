@@ -76,9 +76,9 @@ Route::prefix('admin')->group(function () {
 
         // Shipping
         Route::get('/shipping', [AdminController::class, 'shipping'])->name('admin.shipping');
-        Route::post('/shipping', [AdminController::class, 'addShippingZone'])->name('admin.shipping.add');
+        Route::post('/shipping', [AdminController::class, 'addShippingMethod'])->name('admin.shipping.add');
         Route::post('/shipping/rate', [AdminController::class, 'addShippingRate'])->name('admin.shipping.rate.add');
-        Route::post('/shipping/delete', [AdminController::class, 'deleteShippingZone'])->name('admin.shipping.delete');
+        Route::post('/shipping/delete', [AdminController::class, 'deleteShippingMethod'])->name('admin.shipping.delete');
         Route::post('/shipping/rate/delete', [AdminController::class, 'deleteShippingRate'])->name('admin.shipping.rate.delete');
     });
 });

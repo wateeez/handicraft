@@ -2,61 +2,7 @@
 $pageTitle = "Shipping Methods & Rates";
 include __DIR__ . '/includes/header.php';
 
-// Handle shipping method operations
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    
-    if ($action === 'add_method') {
-        $name = sanitize($_POST['name']);
-        $code = sanitize($_POST['code']);
-        $description = sanitize($_POST['description'] ?? '');
-        $estimatedDays = sanitize($_POST['estimated_days'] ?? '');
-        $displayOrder = intval($_POST['display_order'] ?? 0);
-        $isActive = isset($_POST['is_active']) ? 1 : 0;
-        
-        $db->execute(
-            "INSERT INTO shipping_methods (name, code, description, estimated_days, display_order, is_active) VALUES (?, ?, ?, ?, ?, ?)",
-            [$name, $code, $description, $estimatedDays, $displayOrder, $isActive]
-        );
-        
-        Session::setFlash('success', 'Shipping method added successfully');
-        redirect('/admin/shipping.php');
-    }
-    
-    elseif ($action === 'add_rate') {
-        $methodId = intval($_POST['shipping_method_id']);
-        $minWeight = floatval($_POST['min_weight']);
-        $maxWeight = floatval($_POST['max_weight']);
-        $pricePerKgActual = floatval($_POST['price_per_kg_actual']);
-        $pricePerKgVolumetric = floatval($_POST['price_per_kg_volumetric']);
-        $basePrice = floatval($_POST['base_price'] ?? 0);
-        
-        $db->execute(
-            "INSERT INTO shipping_rates (shipping_method_id, min_weight, max_weight, price_per_kg_actual, price_per_kg_volumetric, base_price) 
-             VALUES (?, ?, ?, ?, ?, ?)",
-            [$methodId, $minWeight, $maxWeight, $pricePerKgActual, $pricePerKgVolumetric, $basePrice]
-        );
-        
-        Session::setFlash('success', 'Shipping rate added successfully');
-        redirect('/admin/shipping.php');
-    }
-    
-    elseif ($action === 'delete_method') {
-        $id = intval($_POST['id']);
-        $db->execute("DELETE FROM shipping_methods WHERE id = ?", [$id]);
-        Session::setFlash('success', 'Shipping method deleted');
-        redirect('/admin/shipping.php');
-    }
-    
-    elseif ($action === 'delete_rate') {
-        $id = intval($_POST['id']);
-        $db->execute("DELETE FROM shipping_rates WHERE id = ?", [$id]);
-        Session::setFlash('success', 'Shipping rate deleted');
-        redirect('/admin/shipping.php');
-    }
-}
-
-// Get all shipping methods
+// Get all shipping methods from DB injected by controller
 $methods = $db->fetchAll("SELECT * FROM shipping_methods ORDER BY display_order ASC, name ASC");
 
 // Get rates for each method
@@ -69,110 +15,139 @@ foreach ($methods as $method) {
 }
 ?>
 
-<div class="shipping-admin">
-    <div class="info-section">
-        <h2><i class="fas fa-info-circle"></i> Shipping Calculation System</h2>
-        <div class="info-grid">
-            <div class="info-card">
-                <h4>Dimensional Factor</h4>
-                <p><?php echo DIMENSIONAL_FACTOR; ?></p>
-                <small>Used for volumetric weight calculation</small>
+<div class="admin-content">
+    <div class="page-header">
+        <h1><i class="fas fa-truck"></i> Shipping Methods</h1>
+        <div class="page-actions">
+            <button class="btn btn-primary" onclick="showModal('addMethodModal')">
+                <i class="fas fa-plus"></i> Add Method
+            </button>
+            <button class="btn btn-success" onclick="showModal('addRateModal')">
+                <i class="fas fa-plus"></i> Add Rate Tier
+            </button>
+        </div>
+    </div>
+
+    <!-- Info Section -->
+    <div class="dashboard-section" style="margin-bottom: 2rem;">
+        <h2 style="margin-bottom:1.5rem;"><i class="fas fa-info-circle"></i> Shipping Logic</h2>
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: var(--color-bg-alt); color: var(--color-primary);"><i
+                        class="fas fa-cube"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" style="font-size:1.2rem;"><?php echo DIMENSIONAL_FACTOR; ?></div>
+                    <div class="stat-label">Dimensional Factor</div>
+                </div>
             </div>
-            <div class="info-card">
-                <h4>Packaging Buffer</h4>
-                <p><?php echo PACKAGING_BUFFER; ?> cm</p>
-                <small>Added to each dimension (L, W, H)</small>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: var(--color-bg-alt); color: var(--color-secondary);"><i
+                        class="fas fa-box-open"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" style="font-size:1.2rem;">+<?php echo PACKAGING_BUFFER; ?> cm</div>
+                    <div class="stat-label">Packaging Buffer</div>
+                </div>
             </div>
-            <div class="info-card">
-                <h4>Calculation Method</h4>
-                <p>Max(Actual, Volumetric)</p>
-                <small>Greater weight is used for pricing</small>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: var(--color-bg-alt); color: var(--color-info);"><i
+                        class="fas fa-calculator"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" style="font-size:1.2rem;">Max(A, V)</div>
+                    <div class="stat-label">Calculation Method</div>
+                </div>
             </div>
         </div>
-        <p class="formula">
-            <strong>Formula:</strong> Volumetric Weight = (Length × Width × Height) / <?php echo DIMENSIONAL_FACTOR; ?>
+        <p
+            style="margin-top:1.5rem; font-size:0.9rem; color:var(--color-text-sub); background:var(--color-bg-alt); padding:1rem; border-radius:var(--radius-sm);">
+            <strong>Formula:</strong> Volumetric Weight = ((Length + Buffer) × (Width + Buffer) × (Height + Buffer)) /
+            <?php echo DIMENSIONAL_FACTOR; ?>.
+            The system uses the greater of Actual Weight or Volumetric Weight for pricing.
         </p>
     </div>
 
-    <div class="page-actions">
-        <button class="btn btn-primary" onclick="showModal('addMethodModal')">
-            <i class="fas fa-plus"></i> Add Shipping Method
-        </button>
-        <button class="btn btn-success" onclick="showModal('addRateModal')">
-            <i class="fas fa-plus"></i> Add Rate Tier
-        </button>
-    </div>
+    <div class="methods-list" style="display:grid; gap:2rem;">
+        <?php if (empty($methods)): ?>
+            <div class="dashboard-section text-center">No shipping methods defined.</div>
+        <?php else: ?>
+            <?php foreach ($methods as $method): ?>
+                <div class="dashboard-section">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--color-border); padding-bottom:1rem;">
+                        <div>
+                            <h3 style="margin:0;"><?php echo htmlspecialchars($method['name']); ?></h3>
+                            <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
+                                <span class="badge badge-info">Code: <?php echo htmlspecialchars($method['code']); ?></span>
+                                <?php if ($method['estimated_days']): ?>
+                                    <span class="badge badge-secondary"><i class="fas fa-clock"></i>
+                                        <?php echo htmlspecialchars($method['estimated_days']); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <span class="badge badge-<?php echo $method['is_active'] ? 'success' : 'secondary'; ?>">
+                                <?php echo $method['is_active'] ? 'Active' : 'Inactive'; ?>
+                            </span>
+                            <form method="POST" action="/admin/shipping/delete">
+                                <?php echo csrf_field(); ?>
+                                <input type="hidden" name="id" value="<?php echo $method['id']; ?>">
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Delete this shipping method?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
 
-    <!-- Shipping Methods List -->
-    <div class="methods-list">
-        <?php foreach ($methods as $method): ?>
-            <div class="method-item">
-                <div class="method-header">
-                    <div class="method-info">
-                        <h3><?php echo htmlspecialchars($method['name']); ?></h3>
-                        <span class="code-badge">Code: <?php echo htmlspecialchars($method['code']); ?></span>
-                        <?php if ($method['estimated_days']): ?>
-                            <span class="delivery-badge"><i class="fas fa-clock"></i> <?php echo htmlspecialchars($method['estimated_days']); ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="method-actions">
-                        <span class="badge badge-<?php echo $method['is_active'] ? 'success' : 'secondary'; ?>">
-                            <?php echo $method['is_active'] ? 'Active' : 'Inactive'; ?>
-                        </span>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="action" value="delete_method">
-                            <input type="hidden" name="id" value="<?php echo $method['id']; ?>">
-                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this shipping method?')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                
-                <?php if ($method['description']): ?>
-                    <p class="method-description"><?php echo htmlspecialchars($method['description']); ?></p>
-                <?php endif; ?>
-                
-                <!-- Rate Tiers -->
-                <?php if (!empty($rates[$method['id']])): ?>
-                    <div class="rates-table">
-                        <h4>Rate Tiers:</h4>
+                    <?php if ($method['description']): ?>
+                        <p style="color:var(--color-text-sub); margin-bottom:1.5rem;">
+                            <?php echo htmlspecialchars($method['description']); ?>
+                        </p>
+                    <?php endif; ?>
+
+                    <!-- Rate Tiers -->
+                    <div class="table-responsive">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Weight Range (kg)</th>
                                     <th>Base Price</th>
-                                    <th>Price/kg (Actual Weight)</th>
+                                    <th>Price/kg (Actual)</th>
                                     <th>Price/kg (Volumetric)</th>
-                                    <th>Actions</th>
+                                    <th style="text-align:right;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($rates[$method['id']] as $rate): ?>
+                                <?php if (empty($rates[$method['id']])): ?>
                                     <tr>
-                                        <td><?php echo $rate['min_weight']; ?> - <?php echo $rate['max_weight']; ?> kg</td>
-                                        <td><?php echo formatPrice($rate['base_price']); ?></td>
-                                        <td><?php echo formatPrice($rate['price_per_kg_actual']); ?></td>
-                                        <td><?php echo formatPrice($rate['price_per_kg_volumetric']); ?></td>
-                                        <td>
-                                            <form method="POST" style="display: inline;">
-                                                <input type="hidden" name="action" value="delete_rate">
-                                                <input type="hidden" name="id" value="<?php echo $rate['id']; ?>">
-                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this rate?')">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </td>
+                                        <td colspan="5" class="text-center">No rate tiers defined for this method.</td>
                                     </tr>
-                                <?php endforeach; ?>
+                                <?php else: ?>
+                                    <?php foreach ($rates[$method['id']] as $rate): ?>
+                                        <tr>
+                                            <td><span style="font-weight:600;"><?php echo $rate['min_weight']; ?> -
+                                                    <?php echo $rate['max_weight']; ?></span> kg</td>
+                                            <td><?php echo formatPrice($rate['base_price']); ?></td>
+                                            <td><?php echo formatPrice($rate['price_per_kg_actual']); ?></td>
+                                            <td><?php echo formatPrice($rate['price_per_kg_volumetric']); ?></td>
+                                            <td style="text-align:right;">
+                                                <form method="POST" action="/admin/shipping/rate/delete">
+                                                    <?php echo csrf_field(); ?>
+                                                    <input type="hidden" name="id" value="<?php echo $rate['id']; ?>">
+                                                    <button type="submit" class="btn btn-sm btn-danger"
+                                                        onclick="return confirm('Delete this rate tier?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
-                <?php else: ?>
-                    <p class="no-rates">No rate tiers defined for this method</p>
-                <?php endif; ?>
-            </div>
-        <?php endforeach; ?>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -181,8 +156,8 @@ foreach ($methods as $method) {
     <div class="modal-content">
         <span class="close" onclick="closeModal('addMethodModal')">&times;</span>
         <h2>Add Shipping Method</h2>
-        <form method="POST">
-            <input type="hidden" name="action" value="add_method">
+        <form method="POST" action="/admin/shipping">
+            <?php echo csrf_field(); ?>
             <div class="form-group">
                 <label>Method Name * (e.g., DHL Express, Aramex)</label>
                 <input type="text" name="name" required placeholder="DHL Express">
@@ -219,14 +194,15 @@ foreach ($methods as $method) {
     <div class="modal-content">
         <span class="close" onclick="closeModal('addRateModal')">&times;</span>
         <h2>Add Rate Tier</h2>
-        <form method="POST">
-            <input type="hidden" name="action" value="add_rate">
+        <form method="POST" action="/admin/shipping/rate">
+            <?php echo csrf_field(); ?>
             <div class="form-group">
                 <label>Shipping Method *</label>
                 <select name="shipping_method_id" required>
                     <option value="">Select Method</option>
                     <?php foreach ($methods as $method): ?>
-                        <option value="<?php echo $method['id']; ?>"><?php echo htmlspecialchars($method['name']); ?></option>
+                        <option value="<?php echo $method['id']; ?>"><?php echo htmlspecialchars($method['name']); ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -252,11 +228,13 @@ foreach ($methods as $method) {
                 </div>
                 <div class="form-group">
                     <label>Price per KG (Volumetric) *</label>
-                    <input type="number" name="price_per_kg_volumetric" step="0.01" min="0" required placeholder="18.00">
+                    <input type="number" name="price_per_kg_volumetric" step="0.01" min="0" required
+                        placeholder="18.00">
                 </div>
             </div>
             <div class="info-note">
-                <i class="fas fa-info-circle"></i> System will use the greater of (actual weight × price) or (volumetric weight × price)
+                <i class="fas fa-info-circle"></i> System will use the greater of (actual weight × price) or (volumetric
+                weight × price)
             </div>
             <button type="submit" class="btn btn-primary">Add Rate Tier</button>
         </form>
@@ -264,19 +242,19 @@ foreach ($methods as $method) {
 </div>
 
 <script>
-function showModal(modalId) {
-    document.getElementById(modalId).style.display = 'block';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
+    function showModal(modalId) {
+        document.getElementById(modalId).style.display = 'block';
     }
-}
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    window.onclick = function (event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
+    }
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

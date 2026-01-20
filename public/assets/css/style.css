@@ -1562,7 +1562,6 @@ textarea:focus {
     }
 }
 
-.checkout-form-section {}
 
 .form-section {
     background: white;
@@ -1631,7 +1630,6 @@ textarea:focus {
     color: var(--color-primary);
 }
 
-.radio-card input:checked {}
 
 /* Logic handled by JS class usually, but simple CSS check works */
 .radio-card:has(input:checked) {

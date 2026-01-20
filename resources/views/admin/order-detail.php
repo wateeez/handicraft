@@ -58,15 +58,17 @@ include __DIR__ . '/includes/header.php';
                     <input type="hidden" name="order_id" value="<?php echo $order->id; ?>">
                     <select name="status"
                         style="flex:1; padding:0.5rem; border-radius:var(--radius-sm); border:1px solid var(--color-border);">
-                        <option value="Pending" <?php echo $order->status === 'Pending' ? 'selected' : ''; ?>>Pending
+                        <option value="pending" <?php echo strtolower($order->status) === 'pending' ? 'selected' : ''; ?>>
+                            Pending
                         </option>
-                        <option value="Processing" <?php echo $order->status === 'Processing' ? 'selected' : ''; ?>>
+                        <option value="processing" <?php echo strtolower($order->status) === 'processing' ? 'selected' : ''; ?>>
                             Processing</option>
-                        <option value="Shipped" <?php echo $order->status === 'Shipped' ? 'selected' : ''; ?>>Shipped
+                        <option value="shipped" <?php echo strtolower($order->status) === 'shipped' ? 'selected' : ''; ?>>
+                            Shipped
                         </option>
-                        <option value="Delivered" <?php echo $order->status === 'Delivered' ? 'selected' : ''; ?>>
+                        <option value="delivered" <?php echo strtolower($order->status) === 'delivered' ? 'selected' : ''; ?>>
                             Delivered</option>
-                        <option value="Cancelled" <?php echo $order->status === 'Cancelled' ? 'selected' : ''; ?>>
+                        <option value="cancelled" <?php echo strtolower($order->status) === 'cancelled' ? 'selected' : ''; ?>>
                             Cancelled</option>
                     </select>
                     <button type="submit" class="btn btn-primary btn-sm">Update</button>
@@ -81,10 +83,10 @@ include __DIR__ . '/includes/header.php';
                     <input type="hidden" name="order_id" value="<?php echo $order->id; ?>">
                     <select name="payment_status"
                         style="flex:1; padding:0.5rem; border-radius:var(--radius-sm); border:1px solid var(--color-border);">
-                        <option value="Unpaid" <?php echo ($order->payment_status ?? 'Unpaid') === 'Unpaid' ? 'selected' : ''; ?>>Unpaid</option>
-                        <option value="Paid" <?php echo ($order->payment_status ?? '') === 'Paid' ? 'selected' : ''; ?>>
+                        <option value="unpaid" <?php echo strtolower($order->payment_status ?? 'unpaid') === 'unpaid' ? 'selected' : ''; ?>>Unpaid</option>
+                        <option value="paid" <?php echo strtolower($order->payment_status ?? '') === 'paid' ? 'selected' : ''; ?>>
                             Paid</option>
-                        <option value="Refunded" <?php echo ($order->payment_status ?? '') === 'Refunded' ? 'selected' : ''; ?>>Refunded</option>
+                        <option value="refunded" <?php echo strtolower($order->payment_status ?? '') === 'refunded' ? 'selected' : ''; ?>>Refunded</option>
                     </select>
                     <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> Update</button>
                 </form>

@@ -4,15 +4,16 @@ include __DIR__ . '/includes/header.php';
 
 // Get billing statistics
 $paid_total = \Illuminate\Support\Facades\DB::table('orders')
-    ->where('payment_status', 'Paid')
+    ->where('payment_status', 'paid')
     ->sum('total_amount');
 
 $unpaid_total = \Illuminate\Support\Facades\DB::table('orders')
-    ->where('payment_status', '!=', 'Paid')
+    ->where('payment_status', '!=', 'paid')
+    ->where('payment_status', '!=', 'refunded')
     ->sum('total_amount');
 
 $refunded_total = \Illuminate\Support\Facades\DB::table('orders')
-    ->where('payment_status', 'Refunded')
+    ->where('payment_status', 'refunded')
     ->sum('total_amount');
 
 // Get all orders with payment breakdown
@@ -128,11 +129,11 @@ $orders = \Illuminate\Support\Facades\DB::table('orders')
                         if (!$filter)
                             return true;
                         if ($filter === 'paid')
-                            return $order->payment_status === 'Paid';
+                            return strtolower($order->payment_status) === 'paid';
                         if ($filter === 'unpaid')
-                            return $order->payment_status !== 'Paid' && $order->payment_status !== 'Refunded';
+                            return strtolower($order->payment_status) !== 'paid' && strtolower($order->payment_status) !== 'refunded';
                         if ($filter === 'refunded')
-                            return $order->payment_status === 'Refunded';
+                            return strtolower($order->payment_status) === 'refunded';
                         return true;
                     });
 

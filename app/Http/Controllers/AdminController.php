@@ -61,8 +61,8 @@ class AdminController extends Controller
         // Get dashboard statistics
         $data = [
             'total_orders' => DB::table('orders')->count(),
-            'pending_orders' => DB::table('orders')->where('status', 'Pending')->count(),
-            'total_revenue' => DB::table('orders')->where('payment_status', 'Paid')->sum('total_amount'),
+            'pending_orders' => DB::table('orders')->where('status', 'pending')->count(),
+            'total_revenue' => DB::table('orders')->where('payment_status', 'paid')->sum('total_amount'),
             'recent_orders' => DB::table('orders')->orderBy('created_at', 'DESC')->limit(10)->get(),
             'low_stock_products' => DB::table('products')->where('stock_quantity', '<=', 10)->where('stock_quantity', '>', 0)->get()
         ];
@@ -195,34 +195,40 @@ class AdminController extends Controller
     }
 
     // Shipping POST handlers
-    public function addShippingZone(Request $request)
+    public function addShippingMethod(Request $request)
     {
         $this->requireLogin();
 
         $name = $request->input('name');
-        $countries = $request->input('countries');
-        $is_active = $request->input('is_active', 1);
+        $code = $request->input('code');
+        $description = $request->input('description');
+        $estimated_days = $request->input('estimated_days');
+        $display_order = $request->input('display_order', 0);
+        $is_active = $request->has('is_active') ? 1 : 0;
 
-        DB::table('shipping_zones')->insert([
+        DB::table('shipping_methods')->insert([
             'name' => $name,
-            'countries' => $countries,
+            'code' => $code,
+            'description' => $description,
+            'estimated_days' => $estimated_days,
+            'display_order' => $display_order,
             'is_active' => $is_active,
             'created_at' => now(),
             'updated_at' => now()
         ]);
 
-        Session::flash('success', 'Shipping zone added successfully');
+        Session::flash('success', 'Shipping method added successfully');
         return redirect()->route('admin.shipping');
     }
 
-    public function deleteShippingZone(Request $request)
+    public function deleteShippingMethod(Request $request)
     {
         $this->requireLogin();
         $id = $request->input('id');
 
-        DB::table('shipping_zones')->where('id', $id)->delete();
+        DB::table('shipping_methods')->where('id', $id)->delete();
 
-        Session::flash('success', 'Shipping zone deleted successfully');
+        Session::flash('success', 'Shipping method deleted successfully');
         return redirect()->route('admin.shipping');
     }
 
@@ -230,20 +236,20 @@ class AdminController extends Controller
     {
         $this->requireLogin();
 
-        $zone_id = $request->input('zone_id');
-        $name = $request->input('name');
+        $shipping_method_id = $request->input('shipping_method_id');
         $min_weight = $request->input('min_weight');
         $max_weight = $request->input('max_weight');
-        $rate = $request->input('rate');
-        $is_active = $request->input('is_active', 1);
+        $price_per_kg_actual = $request->input('price_per_kg_actual');
+        $price_per_kg_volumetric = $request->input('price_per_kg_volumetric');
+        $base_price = $request->input('base_price', 0);
 
         DB::table('shipping_rates')->insert([
-            'zone_id' => $zone_id,
-            'name' => $name,
+            'shipping_method_id' => $shipping_method_id,
             'min_weight' => $min_weight,
             'max_weight' => $max_weight,
-            'rate' => $rate,
-            'is_active' => $is_active,
+            'price_per_kg_actual' => $price_per_kg_actual,
+            'price_per_kg_volumetric' => $price_per_kg_volumetric,
+            'base_price' => $base_price,
             'created_at' => now(),
             'updated_at' => now()
         ]);
@@ -474,7 +480,33 @@ class AdminController extends Controller
 
             $data = array_combine($headers, $row);
 
+            // Check for required 'slug' field
+            if (!array_key_exists('slug', $data) || $data['slug'] === '' || $data['slug'] === null) {
+                $errors[] = "Row " . ($index + 2) . ": Missing required 'slug' field";
+                continue;
+            }
+
+            // Convert empty strings to null for nullable fields
+            $nullableFields = [
+                'subcategory_id', 'sale_price', 'cost_price', 'actual_weight', 'length', 'width', 'height'
+            ];
+            foreach ($nullableFields as $field) {
+                if (isset($data[$field]) && ($data[$field] === '' || strtolower($data[$field]) === 'null')) {
+                    $data[$field] = null;
+                }
+            }
+
+            // Also handle stock_quantity and price as numbers
+            $data['stock_quantity'] = isset($data['stock']) && $data['stock'] !== '' ? $data['stock'] : 0;
+            $data['price'] = isset($data['price']) && $data['price'] !== '' ? $data['price'] : 0;
+
             try {
+                // Check for duplicate slug
+                $existing = DB::table('products')->where('slug', $data['slug'])->first();
+                if ($existing) {
+                    $errors[] = "Row " . ($index + 2) . ": Duplicate slug '" . $data['slug'] . "' (skipped)";
+                    continue;
+                }
                 DB::table('products')->insert([
                     'name' => $data['name'] ?? '',
                     'slug' => $data['slug'] ?? '',
@@ -483,11 +515,11 @@ class AdminController extends Controller
                     'subcategory_id' => $data['subcategory_id'] ?? null,
                     'description' => $data['description'] ?? '',
                     'short_description' => $data['short_description'] ?? '',
-                    'price' => $data['price'] ?? 0,
-                    'sale_price' => $data['compare_price'] ?? null,
+                    'price' => $data['price'],
+                    'sale_price' => $data['sale_price'] ?? null,
                     'cost_price' => $data['cost_price'] ?? null,
-                    'stock_quantity' => $data['stock'] ?? 0,
-                    'actual_weight' => $data['weight'] ?? null,
+                    'stock_quantity' => $data['stock_quantity'],
+                    'actual_weight' => $data['actual_weight'] ?? null,
                     'length' => $data['length'] ?? null,
                     'width' => $data['width'] ?? null,
                     'height' => $data['height'] ?? null,
@@ -531,10 +563,18 @@ class AdminController extends Controller
 
         $filename = 'products_export_' . date('Y-m-d_His') . '.csv';
 
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
 
-        $output = fopen('php://output', 'w');
+        $output = fopen('php://temp', 'r+');
+
+        // Add BOM for Excel UTF-8 compatibility
+        fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
         // Headers
         fputcsv($output, [
@@ -570,10 +610,10 @@ class AdminController extends Controller
                 $product->description,
                 $product->short_description,
                 $product->price,
-                $product->compare_price,
+                $product->sale_price,
                 $product->cost_price,
-                $product->stock,
-                $product->weight,
+                $product->stock_quantity,
+                $product->actual_weight,
                 $product->length,
                 $product->width,
                 $product->height,
@@ -582,8 +622,11 @@ class AdminController extends Controller
             ]);
         }
 
+        rewind($output);
+        $csv = stream_get_contents($output);
         fclose($output);
-        exit;
+
+        return response($csv, 200, $headers);
     }
 
     public function downloadTemplate()
@@ -758,7 +801,7 @@ class AdminController extends Controller
         DB::table('orders')
             ->where('id', $orderId)
             ->update([
-                'status' => $status,
+                'status' => strtolower($status),
                 'updated_at' => now()
             ]);
 
@@ -776,7 +819,7 @@ class AdminController extends Controller
         DB::table('orders')
             ->where('id', $orderId)
             ->update([
-                'payment_status' => $paymentStatus,
+                'payment_status' => strtolower($paymentStatus),
                 'updated_at' => now()
             ]);
 

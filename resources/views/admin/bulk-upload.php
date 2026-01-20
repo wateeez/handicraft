@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
         </ol>
         
         <div class="template-download">
-            <a href="/admin/download-template.php" class="btn btn-info">
+            <a href="/admin/download-template" class="btn btn-info">
                 <i class="fas fa-download"></i> Download CSV Template
             </a>
         </div>
@@ -164,6 +164,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
     <div class="upload-form-section">
         <h2>Upload CSV File</h2>
         <form method="POST" enctype="multipart/form-data">
+            <?php if(function_exists('csrf_field')) { echo csrf_field(); } else { ?>
+            <input type="hidden" name="_token" value="<?php echo csrf_token(); ?>">
+            <?php } ?>
             <div class="form-group">
                 <label>Select CSV File</label>
                 <input type="file" name="csv_file" accept=".csv" required>
