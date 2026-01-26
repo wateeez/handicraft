@@ -132,7 +132,7 @@ $orderItems = \Illuminate\Support\Facades\DB::table('order_items')->where('order
 
         <div class="success-note">
             <p><strong>What's Next?</strong></p>
-            <p>We've sent a confirmation email to <strong><?php echo htmlspecialchars($order['customer_email']); ?></strong> with your order details.</p>
+            <p>We've sent a confirmation email to <strong><?php echo htmlspecialchars($order->customer_email); ?></strong> with your order details.</p>
             <p>You'll receive another email with tracking information once your order ships.</p>
         </div>
     </div>

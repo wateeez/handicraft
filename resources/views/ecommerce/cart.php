@@ -1,9 +1,15 @@
 <?php
 $pageTitle = "Shopping Cart";
-
 // Get cart items
 $cartItems = getCartItems();
 $subtotal = 0;
+// Get shipping methods
+$shippingMethods = $db->fetchAll("SELECT * FROM shipping_methods WHERE is_active = 1 ORDER BY display_order ASC");
+$selectedShipping = isset($_SESSION['cart_shipping_method']) ? $_SESSION['cart_shipping_method'] : ($shippingMethods[0]['id'] ?? null);
+$shippingCost = 0;
+if ($selectedShipping) {
+    $shippingCost = calculateCartShipping($cartItems, $selectedShipping);
+}
 ?>
 
 <div class="cart-page">
@@ -49,7 +55,7 @@ $subtotal = 0;
                                             <?php echo csrf_field(); ?>
                                             <input type="hidden" name="cart_item_id" value="<?php echo $item['id']; ?>">
                                             <input type="number" name="quantity" value="<?php echo $item['quantity']; ?>" 
-                                                   min="1" max="<?php echo $item['stock_quantity']; ?>" 
+                                                   min="1" 
                                                    onchange="this.form.submit()">
                                         </form>
                                     </td>
@@ -86,12 +92,27 @@ $subtotal = 0;
                         <span>Tax (estimated):</span>
                         <span><?php echo formatPrice(calculateTax($subtotal)); ?></span>
                     </div>
-                    <div class="summary-note">
-                        <small>Shipping cost will be calculated at checkout</small>
+                    <form id="shippingForm" method="POST" action="/api/cart-shipping.php" style="margin-bottom:1rem;">
+                        <div class="summary-row">
+                            <span>Shipping:</span>
+                            <select name="shipping_method" id="shippingMethodSelect" onchange="updateShipping()" style="width: 60%;">
+                                <?php foreach ($shippingMethods as $method): 
+                                    $cost = calculateCartShipping($cartItems, $method['id']);
+                                ?>
+                                    <option value="<?php echo $method['id']; ?>" data-cost="<?php echo $cost; ?>" <?php echo $selectedShipping == $method['id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($method['name']); ?> (<?php echo formatPrice($cost); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </form>
+                    <div class="summary-row">
+                        <span>Shipping Cost:</span>
+                        <span id="shippingCostDisplay"><?php echo formatPrice($shippingCost); ?></span>
                     </div>
                     <div class="summary-row total">
                         <span>Estimated Total:</span>
-                        <span><?php echo formatPrice($subtotal + calculateTax($subtotal)); ?></span>
+                        <span id="cartTotalDisplay"><?php echo formatPrice($subtotal + calculateTax($subtotal) + $shippingCost); ?></span>
                     </div>
                     <a href="/shop/checkout" class="btn btn-primary btn-block">
                         Proceed to Checkout <i class="fas fa-arrow-right"></i>
@@ -120,11 +141,33 @@ $subtotal = 0;
 </div>
 
 <script>
+function updateShipping() {
+    var select = document.getElementById('shippingMethodSelect');
+    var selected = select.options[select.selectedIndex];
+    var cost = parseFloat(selected.getAttribute('data-cost'));
+    var subtotal = <?php echo $subtotal; ?>;
+    var tax = <?php echo calculateTax($subtotal); ?>;
+    document.getElementById('shippingCostDisplay').textContent = '<?php echo CURRENCY_SYMBOL; ?>' + cost.toFixed(2);
+    document.getElementById('cartTotalDisplay').textContent = '<?php echo CURRENCY_SYMBOL; ?>' + (subtotal + tax + cost).toFixed(2);
+    // Persist selection via POST
+    var form = document.getElementById('shippingForm');
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', form.action, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    var params = 'shipping_method=' + encodeURIComponent(select.value);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            // Reload cart summary to reflect new shipping method
+            location.reload();
+        }
+    };
+    xhr.send(params);
+}
 function applyCouponCode() {
     const form = document.getElementById('couponForm');
     const formData = new FormData(form);
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
     fetch('/shop/api/coupon/apply', {
         method: 'POST',
         headers: {

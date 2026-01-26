@@ -2552,6 +2552,16 @@ p {
     }
 
     .products-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Full width cards */
+    }
+
+    .product-image {
+        height: auto;
+        aspect-ratio: 3/4; /* Portrait aspect ratio (e.g., 300x400) */
+    }
+    
+    .product-image img {
+        height: 100%;
+        object-fit: cover;
     }
 }

@@ -149,12 +149,18 @@ $latestBlogs = $db->fetchAll(
                             <?php endif; ?>
                         </div>
 
-                        <?php if ($product['stock_quantity'] > 0): ?>
+                        <?php if (!($product['subject_to_availability'] ?? 0)): ?>
                             <div class="product-action-btn">
                                 <button class="btn btn-primary btn-add-to-cart"
                                     onclick="addToCart(<?php echo $product['id']; ?>)">
                                     Add to Basket
                                 </button>
+                            </div>
+                        <?php else: ?>
+                            <div class="product-action-btn">
+                                <a href="/shop/product/<?php echo $product['slug']; ?>" class="btn btn-secondary btn-add-to-cart">
+                                    View Details
+                                </a>
                             </div>
                         <?php endif; ?>
                     </div>

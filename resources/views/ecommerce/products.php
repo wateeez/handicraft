@@ -160,10 +160,8 @@ $categories = $db->fetchAll("SELECT * FROM categories WHERE is_active = 1 ORDER 
                                         <?php if ($product['sale_price']): ?>
                                             <span class="sale-badge">Sale</span>
                                         <?php endif; ?>
-                                        <?php if ($product['stock_quantity'] <= 0): ?>
-                                            <span class="out-of-stock-badge">Out of Stock</span>
-                                        <?php elseif ($product['stock_quantity'] <= $product['low_stock_threshold']): ?>
-                                            <span class="low-stock-badge">Low Stock</span>
+                                        <?php if ($product['subject_to_availability'] ?? 0): ?>
+                                            <span class="out-of-stock-badge" style="background-color: #ff9800; color: #fff;">Subject to Availability</span>
                                         <?php endif; ?>
                                     </div>
                                     <div class="product-info">
@@ -179,10 +177,14 @@ $categories = $db->fetchAll("SELECT * FROM categories WHERE is_active = 1 ORDER 
                                         </div>
                                     </div>
                                 </a>
-                                <?php if ($product['stock_quantity'] > 0): ?>
+                                <?php if (!($product['subject_to_availability'] ?? 0)): ?>
                                     <button class="btn btn-add-to-cart" onclick="addToCart(<?php echo $product['id']; ?>)">
                                         <i class="fas fa-shopping-cart"></i> Add to Cart
                                     </button>
+                                <?php else: ?>
+                                    <a href="/shop/product/<?php echo $product['slug']; ?>" class="btn btn-add-to-cart" style="background-color: #6c757d; color: #fff; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-info-circle"></i> View Details
+                                    </a>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>

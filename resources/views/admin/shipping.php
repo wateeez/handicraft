@@ -110,7 +110,6 @@ foreach ($methods as $method) {
                             <thead>
                                 <tr>
                                     <th>Weight Range (kg)</th>
-                                    <th>Base Price</th>
                                     <th>Price/kg (Actual)</th>
                                     <th>Price/kg (Volumetric)</th>
                                     <th style="text-align:right;">Actions</th>
@@ -119,14 +118,13 @@ foreach ($methods as $method) {
                             <tbody>
                                 <?php if (empty($rates[$method['id']])): ?>
                                     <tr>
-                                        <td colspan="5" class="text-center">No rate tiers defined for this method.</td>
+                                        <td colspan="4" class="text-center">No rate tiers defined for this method.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($rates[$method['id']] as $rate): ?>
                                         <tr>
                                             <td><span style="font-weight:600;"><?php echo $rate['min_weight']; ?> -
                                                     <?php echo $rate['max_weight']; ?></span> kg</td>
-                                            <td><?php echo formatPrice($rate['base_price']); ?></td>
                                             <td><?php echo formatPrice($rate['price_per_kg_actual']); ?></td>
                                             <td><?php echo formatPrice($rate['price_per_kg_volumetric']); ?></td>
                                             <td style="text-align:right;">
@@ -216,11 +214,7 @@ foreach ($methods as $method) {
                     <input type="number" name="max_weight" step="0.01" min="0" required placeholder="5">
                 </div>
             </div>
-            <div class="form-group">
-                <label>Base/Flat Price *</label>
-                <input type="number" name="base_price" step="0.01" min="0" value="0" required>
-                <small>Fixed cost regardless of weight</small>
-            </div>
+
             <div class="form-row">
                 <div class="form-group">
                     <label>Price per KG (Actual Weight) *</label>

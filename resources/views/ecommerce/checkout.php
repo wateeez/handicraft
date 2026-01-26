@@ -232,7 +232,20 @@ foreach ($cartItems as $item) {
                         </div>
                         <div class="summary-row">
                             <span>Shipping:</span>
-                            <span id="summaryShipping"><?php echo formatPrice(calculateCartShipping($cartItems, $shippingMethods[0]['id'])); ?></span>
+                            <span id="summaryShipping">
+                                <?php 
+                                $selectedShippingId = isset($_POST['shipping_method']) ? $_POST['shipping_method'] : ($shippingMethods[0]['id'] ?? null);
+                                $selectedShipping = null;
+                                foreach ($shippingMethods as $method) {
+                                    if ($method['id'] == $selectedShippingId) {
+                                        $selectedShipping = $method;
+                                        break;
+                                    }
+                                }
+                                $shippingCost = $selectedShipping ? calculateCartShipping($cartItems, $selectedShipping['id']) : 0;
+                                echo htmlspecialchars($selectedShipping ? $selectedShipping['name'] : $shippingMethods[0]['name']) . ' (' . formatPrice($shippingCost) . ')';
+                                ?>
+                            </span>
                         </div>
                         <div class="summary-row">
                             <span>Tax:</span>
@@ -280,13 +293,12 @@ function toggleShippingAddress() {
 function updateOrderSummary() {
     const selectedShipping = document.querySelector('input[name="shipping_method"]:checked');
     const shippingCost = parseFloat(selectedShipping.dataset.cost);
+    const shippingName = selectedShipping.closest('.radio-card').querySelector('.radio-content strong').textContent;
     const subtotal = <?php echo $subtotal; ?>;
     const taxRate = <?php echo DEFAULT_TAX_RATE; ?> / 100;
-    
     const tax = subtotal * taxRate;
     const total = subtotal + shippingCost + tax;
-    
-    document.getElementById('summaryShipping').textContent = '<?php echo CURRENCY_SYMBOL; ?>' + shippingCost.toFixed(2);
+    document.getElementById('summaryShipping').textContent = shippingName + ' (' + '<?php echo CURRENCY_SYMBOL; ?>' + shippingCost.toFixed(2) + ')';
     document.getElementById('summaryTotal').textContent = '<?php echo CURRENCY_SYMBOL; ?>' + total.toFixed(2);
 }
 </script>

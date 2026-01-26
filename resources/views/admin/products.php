@@ -88,7 +88,7 @@ $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name ASC");
                     <th>SKU</th>
                     <th>Category</th>
                     <th>Price</th>
-                    <th>Stock</th>
+                    <th>Availability</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -118,12 +118,10 @@ $categories = $db->fetchAll("SELECT * FROM categories ORDER BY name ASC");
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($product['stock_quantity'] <= 0): ?>
-                                    <span class="badge badge-danger">Out of Stock</span>
-                                <?php elseif ($product['stock_quantity'] <= $product['low_stock_threshold']): ?>
-                                    <span class="badge badge-warning"><?php echo $product['stock_quantity']; ?></span>
+                                <?php if ($product['subject_to_availability'] ?? 0): ?>
+                                    <span class="badge badge-warning">Subject to Availability</span>
                                 <?php else: ?>
-                                    <span class="badge badge-success"><?php echo $product['stock_quantity']; ?></span>
+                                    <span class="badge badge-success">Available for Purchase</span>
                                 <?php endif; ?>
                             </td>
                             <td>

@@ -47,8 +47,8 @@ include __DIR__ . '/includes/header.php';
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             <div class="stat-info">
-                <h3><?php echo number_format(count($low_stock_products ?? [])); ?></h3>
-                <p>Low Stock Items</p>
+                <h3><?php echo number_format(count($subject_to_availability_products ?? [])); ?></h3>
+                <p>Subject to Availability</p>
             </div>
         </div>
     </div>
@@ -159,29 +159,29 @@ include __DIR__ . '/includes/header.php';
         <a href="/admin/orders" class="btn btn-secondary"><i class="fas fa-list"></i> View All Orders</a>
     </div>
 
-    <!-- Low Stock Products -->
-    <?php if (!empty($low_stock_products) && count($low_stock_products) > 0): ?>
+    <!-- Subject to Availability Products -->
+    <?php if (!empty($subject_to_availability_products) && count($subject_to_availability_products) > 0): ?>
         <div class="dashboard-section">
-            <h2>Low Stock Alert</h2>
+            <h2><i class="fas fa-info-circle"></i> Products Subject to Availability</h2>
+            <p style="color: var(--color-text-sub); margin-bottom: 1rem;">These products are visible but cannot be purchased online.</p>
             <div class="table-responsive">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Product</th>
                             <th>SKU</th>
-                            <th>Current Stock</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($low_stock_products as $product): ?>
+                        <?php foreach ($subject_to_availability_products as $product): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($product->name); ?></td>
                                 <td><?php echo htmlspecialchars($product->sku ?? 'N/A'); ?></td>
-                                <td><span class="badge badge-danger"><?php echo $product->stock_quantity; ?></span></td>
+                                <td><span class="badge badge-warning">Subject to Availability</span></td>
                                 <td>
-                                    <a href="/admin/products/edit/<?php echo $product->id; ?>" class="btn btn-sm">Update
-                                        Stock</a>
+                                    <a href="/admin/products/edit/<?php echo $product->id; ?>" class="btn btn-sm btn-primary">Edit Product</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

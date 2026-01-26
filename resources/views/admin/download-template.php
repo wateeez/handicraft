@@ -10,7 +10,7 @@ $output = fopen('php://output', 'w');
 // Write header row
 $header = [
     'name', 'sku', 'category_slug', 'subcategory_slug', 'description', 'short_description',
-    'price', 'sale_price', 'cost_price', 'stock_quantity', 'low_stock_threshold',
+    'price', 'sale_price', 'cost_price', 'subject_to_availability',
     'length', 'width', 'height', 'actual_weight', 'is_active', 'is_featured'
 ];
 
@@ -18,21 +18,20 @@ fputcsv($output, $header);
 
 // Write sample row
 $sampleData = [
-    'Premium Wireless Mouse',
-    'MOUSE-001',
-    'electronics',
-    'computer-accessories',
-    'High-quality wireless mouse with ergonomic design',
-    'Comfortable wireless mouse',
-    '29.99',
-    '24.99',
+    'Premium Handmade Vase',
+    'VASE-001',
+    'home-decor',
+    'vases',
+    'Handcrafted ceramic vase with unique glaze',
+    'Beautiful ceramic vase',
+    '49.99',
+    '',
     '15.00',
-    '100',
-    '10',
-    '10.5',
-    '6.2',
-    '3.8',
-    '0.15',
+    '0', // subject_to_availability (0 = Available, 1 = Subject to Availability)
+    '15.5',
+    '8.2',
+    '8.2',
+    '1.2',
     '1',
     '0'
 ];

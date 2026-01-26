@@ -1,59 +1,66 @@
 <?php
 // Helper Functions
 
-function sanitize($data) {
+function sanitize($data)
+{
     return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
 
-function redirect($url) {
+function redirect($url)
+{
     header("Location: $url");
     exit;
 }
 
-function formatPrice($price) {
+function formatPrice($price)
+{
     return CURRENCY_SYMBOL . number_format($price, 2);
 }
 
-function generateSlug($string) {
+function generateSlug($string)
+{
     $string = strtolower(trim($string));
     $string = preg_replace('/[^a-z0-9-]/', '-', $string);
     $string = preg_replace('/-+/', '-', $string);
     return trim($string, '-');
 }
 
-function generateOrderNumber() {
+function generateOrderNumber()
+{
     return 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
 }
 
-function uploadImage($file, $directory = 'products') {
+function uploadImage($file, $directory = 'products')
+{
     $uploadDir = UPLOAD_DIR . $directory . '/';
-    
+
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
-    
+
     $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    
+
     if (!in_array($file['type'], $allowedTypes)) {
         return ['success' => false, 'message' => 'Invalid file type'];
     }
-    
+
     if ($file['size'] > MAX_FILE_SIZE) {
         return ['success' => false, 'message' => 'File too large'];
     }
-    
+
     $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
     $filename = uniqid() . '_' . time() . '.' . $extension;
     $filepath = $uploadDir . $filename;
-    
+
     if (move_uploaded_file($file['tmp_name'], $filepath)) {
         return ['success' => true, 'filename' => $directory . '/' . $filename];
     }
-    
+
     return ['success' => false, 'message' => 'Upload failed'];
 }
 
-function deleteImage($filename) {
+function deleteImage($filename)
+{
     $filepath = UPLOAD_DIR . $filename;
     if (file_exists($filepath)) {
         unlink($filepath);
@@ -62,44 +69,46 @@ function deleteImage($filename) {
     return false;
 }
 
-function calculateVolumetricWeight($length, $width, $height) {
+function calculateVolumetricWeight($length, $width, $height)
+{
     // Add packaging buffer (8cm to each dimension)
     $shippingLength = $length + PACKAGING_BUFFER;
     $shippingWidth = $width + PACKAGING_BUFFER;
     $shippingHeight = $height + PACKAGING_BUFFER;
-    
+
     // Calculate volumetric weight: (L x W x H) / Dimensional Factor
     $volumetricWeight = ($shippingLength * $shippingWidth * $shippingHeight) / DIMENSIONAL_FACTOR;
-    
+
     return round($volumetricWeight, 2);
 }
 
-function calculateShippingCost($productId, $shippingMethodId) {
+function calculateShippingCost($productId, $shippingMethodId)
+{
     $db = Database::getInstance();
-    
+
     // Get product details
     $product = $db->fetchOne(
         "SELECT actual_weight, shipping_length, shipping_width, shipping_height FROM products WHERE id = ?",
         [$productId]
     );
-    
+
     if (!$product) {
         return 0;
     }
-    
+
     // Calculate volumetric weight
     $volumetricWeight = calculateVolumetricWeight(
         $product['shipping_length'],
         $product['shipping_width'],
         $product['shipping_height']
     );
-    
+
     // Use the greater of actual weight or volumetric weight
     $chargeableWeight = max($product['actual_weight'], $volumetricWeight);
-    
+
     // Get shipping rate for this weight and method
     $rate = $db->fetchOne(
-        "SELECT price_per_kg_actual, price_per_kg_volumetric, base_price 
+        "SELECT price_per_kg_actual, price_per_kg_volumetric 
          FROM shipping_rates 
          WHERE shipping_method_id = ? 
          AND min_weight <= ? 
@@ -108,48 +117,99 @@ function calculateShippingCost($productId, $shippingMethodId) {
          LIMIT 1",
         [$shippingMethodId, $chargeableWeight, $chargeableWeight]
     );
-    
+
     if (!$rate) {
         return 0;
     }
-    
-    // Determine which price to use based on which weight is greater
+
+    // FIXED TIER PRICING: Return the fixed price for the tier (NOT multiplied by weight)
+    // Determine which fixed price to use based on which weight is greater
     if ($product['actual_weight'] > $volumetricWeight) {
-        $shippingCost = $rate['base_price'] + ($chargeableWeight * $rate['price_per_kg_actual']);
+        $shippingCost = $rate['price_per_kg_actual'];  // Fixed price for actual weight
     } else {
-        $shippingCost = $rate['base_price'] + ($chargeableWeight * $rate['price_per_kg_volumetric']);
+        $shippingCost = $rate['price_per_kg_volumetric'];  // Fixed price for volumetric weight
     }
-    
+
     return round($shippingCost, 2);
 }
 
-function calculateCartShipping($cartItems, $shippingMethodId) {
-    $totalShipping = 0;
-    
+function calculateCartShipping($cartItems, $shippingMethodId)
+{
+    return 1.11;
+    // FIXED TIER PRICING: Calculate shipping for the entire cart as one shipment
+    // Not per-item, but based on total weight
+    $db = Database::getInstance();
+    $totalActualWeight = 0;
+    $totalVolumetricWeight = 0;
+
     foreach ($cartItems as $item) {
-        $itemShipping = calculateShippingCost($item['product_id'], $shippingMethodId);
-        $totalShipping += $itemShipping * $item['quantity'];
+        // Get product details
+        $product = $db->fetchOne(
+            "SELECT actual_weight, shipping_length, shipping_width, shipping_height FROM products WHERE id = ?",
+            [$item['product_id']]
+        );
+
+        if ($product) {
+            // Add actual weight for this item × quantity
+            $totalActualWeight += $product['actual_weight'] * $item['quantity'];
+
+            // Calculate and add volumetric weight for this item × quantity
+            $volumetricWeight = calculateVolumetricWeight(
+                $product['shipping_length'],
+                $product['shipping_width'],
+                $product['shipping_height']
+            );
+            $totalVolumetricWeight += $volumetricWeight * $item['quantity'];
+        }
     }
-    
-    return round($totalShipping, 2);
+
+    // Use the greater of total actual weight or total volumetric weight
+    $chargeableWeight = max($totalActualWeight, $totalVolumetricWeight);
+
+    // Get shipping rate for this total weight
+    $rate = $db->fetchOne(
+        "SELECT price_per_kg_actual, price_per_kg_volumetric 
+         FROM shipping_rates 
+         WHERE shipping_method_id = ? 
+         AND min_weight <= ? 
+         AND max_weight >= ?
+         ORDER BY min_weight ASC
+         LIMIT 1",
+        [$shippingMethodId, $chargeableWeight, $chargeableWeight]
+    );
+
+    if (!$rate) {
+        return 0;
+    }
+
+    // FIXED TIER PRICING: Return the fixed price for the tier (NOT multiplied by weight)
+    if ($totalActualWeight > $totalVolumetricWeight) {
+        $shippingCost = $rate['price_per_kg_actual'];  // Fixed price for actual weight
+    } else {
+        $shippingCost = $rate['price_per_kg_volumetric'];  // Fixed price for volumetric weight
+    }
+
+    return round($shippingCost, 2);
 }
 
-function calculateTax($amount, $taxRateId = null) {
+function calculateTax($amount, $taxRateId = null)
+{
     $db = Database::getInstance();
-    
+
     if ($taxRateId) {
         $taxRate = $db->fetchOne("SELECT rate FROM tax_rates WHERE id = ? AND is_active = 1", [$taxRateId]);
         $rate = $taxRate ? $taxRate['rate'] : DEFAULT_TAX_RATE;
     } else {
         $rate = DEFAULT_TAX_RATE;
     }
-    
+
     return round($amount * ($rate / 100), 2);
 }
 
-function applyCoupon($code, $subtotal) {
+function applyCoupon($code, $subtotal)
+{
     $db = Database::getInstance();
-    
+
     $coupon = $db->fetchOne(
         "SELECT * FROM discount_coupons 
          WHERE code = ? 
@@ -159,18 +219,18 @@ function applyCoupon($code, $subtotal) {
          AND (usage_limit IS NULL OR usage_count < usage_limit)",
         [$code]
     );
-    
+
     if (!$coupon) {
         return ['success' => false, 'message' => 'Invalid or expired coupon'];
     }
-    
+
     if ($subtotal < $coupon['min_purchase_amount']) {
         return [
-            'success' => false, 
+            'success' => false,
             'message' => 'Minimum purchase amount not met: ' . formatPrice($coupon['min_purchase_amount'])
         ];
     }
-    
+
     if ($coupon['discount_type'] === 'fixed') {
         $discount = $coupon['discount_value'];
     } else {
@@ -179,7 +239,7 @@ function applyCoupon($code, $subtotal) {
             $discount = $coupon['max_discount_amount'];
         }
     }
-    
+
     return [
         'success' => true,
         'discount' => round($discount, 2),
@@ -187,15 +247,16 @@ function applyCoupon($code, $subtotal) {
     ];
 }
 
-function getCart() {
+function getCart()
+{
     $db = Database::getInstance();
     $sessionId = Session::getSessionId();
-    
+
     $cart = $db->fetchOne(
         "SELECT id FROM carts WHERE session_id = ?",
         [$sessionId]
     );
-    
+
     if (!$cart) {
         $db->execute(
             "INSERT INTO carts (session_id) VALUES (?)",
@@ -205,16 +266,17 @@ function getCart() {
     } else {
         $cartId = $cart['id'];
     }
-    
+
     return $cartId;
 }
 
-function getCartItems() {
+function getCartItems()
+{
     $db = Database::getInstance();
     $cartId = getCart();
-    
+
     return $db->fetchAll(
-        "SELECT ci.*, p.name, p.slug, p.stock_quantity, 
+        "SELECT ci.*, p.name, p.slug, p.subject_to_availability, 
                 (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
          FROM cart_items ci
          JOIN products p ON ci.product_id = p.id
@@ -223,7 +285,8 @@ function getCartItems() {
     );
 }
 
-function getCartCount() {
+function getCartCount()
+{
     $items = getCartItems();
     $count = 0;
     foreach ($items as $item) {
@@ -232,7 +295,8 @@ function getCartCount() {
     return $count;
 }
 
-function getCartTotal() {
+function getCartTotal()
+{
     $items = getCartItems();
     $total = 0;
     foreach ($items as $item) {
@@ -241,36 +305,34 @@ function getCartTotal() {
     return $total;
 }
 
-function addToCart($productId, $quantity = 1) {
+function addToCart($productId, $quantity = 1)
+{
     $db = Database::getInstance();
     $cartId = getCart();
-    
-    // Check if product exists and has stock
+
+    // Check if product exists and is available for purchase
     $product = $db->fetchOne(
-        "SELECT id, price, stock_quantity FROM products WHERE id = ? AND is_active = 1",
+        "SELECT id, price, subject_to_availability FROM products WHERE id = ? AND is_active = 1",
         [$productId]
     );
-    
+
     if (!$product) {
         return ['success' => false, 'message' => 'Product not found'];
     }
-    
-    if ($product['stock_quantity'] < $quantity) {
-        return ['success' => false, 'message' => 'Insufficient stock'];
+
+    if ($product['subject_to_availability']) {
+        return ['success' => false, 'message' => 'This product is subject to availability and cannot be purchased online'];
     }
-    
+
     // Check if item already in cart
     $existingItem = $db->fetchOne(
         "SELECT id, quantity FROM cart_items WHERE cart_id = ? AND product_id = ?",
         [$cartId, $productId]
     );
-    
+
     if ($existingItem) {
         $newQuantity = $existingItem['quantity'] + $quantity;
-        if ($newQuantity > $product['stock_quantity']) {
-            return ['success' => false, 'message' => 'Insufficient stock'];
-        }
-        
+
         $db->execute(
             "UPDATE cart_items SET quantity = ? WHERE id = ?",
             [$newQuantity, $existingItem['id']]
@@ -281,42 +343,46 @@ function addToCart($productId, $quantity = 1) {
             [$cartId, $productId, $quantity, $product['price']]
         );
     }
-    
+
     return ['success' => true, 'message' => 'Product added to cart'];
 }
 
-function updateCartItem($cartItemId, $quantity) {
+function updateCartItem($cartItemId, $quantity)
+{
     $db = Database::getInstance();
-    
+
     if ($quantity <= 0) {
         return removeCartItem($cartItemId);
     }
-    
+
     $db->execute(
         "UPDATE cart_items SET quantity = ? WHERE id = ?",
         [$quantity, $cartItemId]
     );
-    
+
     return ['success' => true];
 }
 
-function removeCartItem($cartItemId) {
+function removeCartItem($cartItemId)
+{
     $db = Database::getInstance();
     $db->execute("DELETE FROM cart_items WHERE id = ?", [$cartItemId]);
     return ['success' => true];
 }
 
-function clearCart() {
+function clearCart()
+{
     $db = Database::getInstance();
     $cartId = getCart();
     $db->execute("DELETE FROM cart_items WHERE cart_id = ?", [$cartId]);
 }
 
-function paginate($total, $perPage, $currentPage = 1) {
+function paginate($total, $perPage, $currentPage = 1)
+{
     $totalPages = ceil($total / $perPage);
     $currentPage = max(1, min($currentPage, $totalPages));
     $offset = ($currentPage - 1) * $perPage;
-    
+
     return [
         'total' => $total,
         'per_page' => $perPage,
@@ -328,14 +394,17 @@ function paginate($total, $perPage, $currentPage = 1) {
     ];
 }
 
-function isEmail($email) {
+function isEmail($email)
+{
     return filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
-function hashPassword($password) {
+function hashPassword($password)
+{
     return password_hash($password, PASSWORD_DEFAULT);
 }
 
-function verifyPassword($password, $hash) {
+function verifyPassword($password, $hash)
+{
     return password_verify($password, $hash);
 }

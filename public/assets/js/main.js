@@ -1,9 +1,8 @@
 // Main JavaScript for E-Commerce Site
 
 // Add to Cart Function
-function addToCart(productId, quantity = 1) {
+function addToCart(productId, quantity = 1, shippingMethod = null) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
     fetch('/shop/api/cart/add', {
         method: 'POST',
         headers: {
@@ -12,15 +11,14 @@ function addToCart(productId, quantity = 1) {
         },
         body: JSON.stringify({
             product_id: productId,
-            quantity: quantity
+            quantity: quantity,
+            shipping_method: shippingMethod
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Update cart count
             updateCartCount();
-            // Show success message
             showNotification('Product added to cart!', 'success');
         } else {
             showNotification(data.message || 'Failed to add product', 'error');

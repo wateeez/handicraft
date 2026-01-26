@@ -15,10 +15,10 @@ return [
 
     // Shipping Configuration
     'dimensional_factor' => 5000, // Standard dimensional weight divisor (L x W x H / 5000)
-    'packaging_buffer' => 8, // 8 cm added to each dimension
+    'packaging_buffer' => 6, // 6 cm added to each dimension
 
     // Tax Configuration
-    'default_tax_rate' => 15, // 15%
+    'default_tax_rate' => 13, // 13%
 
     // Currency
     'currency_symbol' => '$',

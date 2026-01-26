@@ -1,0 +1,33 @@
+
+  Dropping all tables  372.50ms DONE
+
+   INFO  Preparing database.  
+
+  Creating migration table  30.55ms DONE
+
+   INFO  Running migrations.  
+
+  2026_01_22_000000_import_ecommerce_schema  897.03ms DONE
+  2026_01_24_000001_remove_base_price_from_shipping_rates  1.99ms FAIL
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[42000]: Syntax error or access violation: 1091 Can't DROP 'base_price'; check that column/key exists (Connection: mysql, SQL: alter table `shipping_rates` drop `base_price`)
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:824
+    820▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    821▕                 );
+    822▕             }
+    823▕ 
+  ➜ 824▕             throw new QueryException(
+    825▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    826▕             );
+    827▕         }
+    828▕     }
+
+  1   vendor\laravel\framework\src\Illuminate\Database\Connection.php:570
+      PDOException::("SQLSTATE[42000]: Syntax error or access violation: 1091 Can't DROP 'base_price'; check that column/key exists")
+
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:570
+      PDOStatement::execute()
+

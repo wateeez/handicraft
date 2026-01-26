@@ -67,53 +67,58 @@ class ShopController extends Controller
     {
         // Load helper functions
         require_once app_path('Helpers/functions.php');
-        
+
         // Create a database wrapper for legacy views
         $db = new class {
-            public function fetchAll($sql, $params = []) {
+            public function fetchAll($sql, $params = [])
+            {
                 $results = DB::select($sql, $params);
-                return array_map(function($item) {
+                return array_map(function ($item) {
                     return (array) $item;
                 }, $results);
             }
-            
-            public function fetchOne($sql, $params = []) {
+
+            public function fetchOne($sql, $params = [])
+            {
                 $result = DB::select($sql, $params);
                 return !empty($result) ? (array) $result[0] : false;
             }
-            
-            public function query($sql, $params = []) {
+
+            public function query($sql, $params = [])
+            {
                 return DB::statement($sql, $params);
             }
-            
-            public function execute($sql, $params = []) {
+
+            public function execute($sql, $params = [])
+            {
                 return DB::statement($sql, $params);
             }
-            
-            public function lastInsertId() {
+
+            public function lastInsertId()
+            {
                 return DB::getPdo()->lastInsertId();
             }
         };
-        
+
         // Set variables for the view
         extract($data);
-        
+
         ob_start();
         include resource_path("views/ecommerce/partials/header.php");
         include resource_path("views/ecommerce/{$page}.php");
         include resource_path("views/ecommerce/partials/footer.php");
         $content = ob_get_clean();
-        
+
         return response($content);
     }
 
     public function addToCart(Request $request)
     {
         require_once app_path('Helpers/functions.php');
-        
+
         $productId = $request->input('product_id');
         $quantity = $request->input('quantity', 1);
-        
+
         $result = addToCart($productId, $quantity);
         return response()->json($result);
     }
@@ -121,7 +126,7 @@ class ShopController extends Controller
     public function cartCount()
     {
         require_once app_path('Helpers/functions.php');
-        
+
         $count = getCartCount();
         return response()->json(['count' => $count]);
     }
@@ -129,10 +134,10 @@ class ShopController extends Controller
     public function applyCoupon(Request $request)
     {
         require_once app_path('Helpers/functions.php');
-        
+
         $code = $request->input('coupon_code');
         $subtotal = getCartTotal();
-        
+
         if ($code) {
             $result = applyCoupon($code, $subtotal);
             if ($result['success']) {
@@ -146,19 +151,19 @@ class ShopController extends Controller
             }
             return response()->json($result);
         }
-        
+
         return response()->json(['success' => false, 'message' => 'Please enter a coupon code']);
     }
 
     public function updateCart(Request $request)
     {
         require_once app_path('Helpers/functions.php');
-        
+
         $cartItemId = $request->input('cart_item_id');
         $quantity = $request->input('quantity', 1);
-        
+
         $result = updateCartItem($cartItemId, $quantity);
-        
+
         Session::flash('success', 'Cart updated successfully');
         return redirect()->route('shop.cart');
     }
@@ -166,11 +171,11 @@ class ShopController extends Controller
     public function removeFromCart(Request $request)
     {
         require_once app_path('Helpers/functions.php');
-        
+
         $cartItemId = $request->input('cart_item_id');
-        
+
         $result = removeCartItem($cartItemId);
-        
+
         Session::flash('success', 'Item removed from cart');
         return redirect()->route('shop.cart');
     }
@@ -178,7 +183,7 @@ class ShopController extends Controller
     public function processCheckout(Request $request)
     {
         require_once app_path('Helpers/functions.php');
-        
+
         // Validate request
         $request->validate([
             'first_name' => 'required',
@@ -191,51 +196,29 @@ class ShopController extends Controller
             'zip' => 'required',
             'country' => 'required',
         ]);
-        
+
         // Get cart items
         $cartItems = getCartItems();
-        
+
         if (empty($cartItems)) {
             Session::flash('error', 'Your cart is empty');
             return redirect()->route('shop.cart');
         }
-        
+
         // Calculate totals
         $subtotal = getCartTotal();
         $tax = calculateTax($subtotal);
-        
+
         // Get shipping charge from selected method
         $shippingMethodId = $request->input('shipping_method');
         $shippingCharge = 0;
         if ($shippingMethodId) {
-            // Calculate cart weight
-            $totalWeight = 0;
-            foreach ($cartItems as $item) {
-                $product = DB::table('products')->where('id', $item['product_id'])->first();
-                if ($product && $product->actual_weight) {
-                    $totalWeight += ($product->actual_weight * $item['quantity']);
-                }
-            }
-            
-            // Get shipping rate based on weight
-            $shippingRate = DB::table('shipping_rates')
-                ->where('shipping_method_id', $shippingMethodId)
-                ->where('min_weight', '<=', $totalWeight)
-                ->where('max_weight', '>=', $totalWeight)
-                ->first();
-            
-            if ($shippingRate) {
-                $shippingCharge = $shippingRate->base_price;
-                // Add weight-based charge if applicable
-                if ($totalWeight > 0) {
-                    $shippingCharge += ($totalWeight * $shippingRate->price_per_kg_actual);
-                }
-            }
+            $shippingCharge = calculateCartShipping($cartItems, $shippingMethodId);
         }
-        
+
         $discount = Session::get('discount_amount', 0);
         $total = $subtotal + $tax + $shippingCharge - $discount;
-        
+
         // Get payment provider name
         $paymentProviderId = $request->input('payment_provider');
         $paymentMethod = 'Cash on Delivery';
@@ -248,11 +231,11 @@ class ShopController extends Controller
                 $paymentMethod = $provider->name;
             }
         }
-        
+
         try {
             // Generate unique order number
             $orderNumber = 'ORD-' . strtoupper(uniqid());
-            
+
             // Create order
             $orderId = DB::table('orders')->insertGetId([
                 'order_number' => $orderNumber,
@@ -283,12 +266,12 @@ class ShopController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-            
+
             // Create order items
             foreach ($cartItems as $item) {
                 // Get product SKU
                 $product = DB::table('products')->where('id', $item['product_id'])->first();
-                
+
                 DB::table('order_items')->insert([
                     'order_id' => $orderId,
                     'product_id' => $item['product_id'],
@@ -299,27 +282,22 @@ class ShopController extends Controller
                     'subtotal' => $item['price'] * $item['quantity'],
                     'created_at' => now(),
                 ]);
-                
-                // Update product stock
-                DB::table('products')
-                    ->where('id', $item['product_id'])
-                    ->decrement('stock_quantity', $item['quantity']);
             }
-            
+
             // Clear cart
             if (Session::has('user_id')) {
                 DB::table('cart')->where('user_id', Session::get('user_id'))->delete();
             } else {
                 Session::forget('cart');
             }
-            
+
             // Clear coupon and shipping
             Session::forget(['coupon_code', 'discount_amount', 'shipping_charge']);
-            
+
             Session::flash('success', 'Order placed successfully! Your order number is: ' . $orderNumber);
             Session::flash('order_number', $orderNumber);
             return redirect()->route('shop.checkout.success');
-            
+
         } catch (\Exception $e) {
             Session::flash('error', 'Failed to process order: ' . $e->getMessage());
             return redirect()->back()->withInput();

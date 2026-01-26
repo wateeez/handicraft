@@ -64,7 +64,7 @@ class AdminController extends Controller
             'pending_orders' => DB::table('orders')->where('status', 'pending')->count(),
             'total_revenue' => DB::table('orders')->where('payment_status', 'paid')->sum('total_amount'),
             'recent_orders' => DB::table('orders')->orderBy('created_at', 'DESC')->limit(10)->get(),
-            'low_stock_products' => DB::table('products')->where('stock_quantity', '<=', 10)->where('stock_quantity', '>', 0)->get()
+            'subject_to_availability_products' => DB::table('products')->where('subject_to_availability', 1)->where('is_active', 1)->get()
         ];
 
         return $this->renderAdminPage('dashboard', $data);
@@ -241,7 +241,6 @@ class AdminController extends Controller
         $max_weight = $request->input('max_weight');
         $price_per_kg_actual = $request->input('price_per_kg_actual');
         $price_per_kg_volumetric = $request->input('price_per_kg_volumetric');
-        $base_price = $request->input('base_price', 0);
 
         DB::table('shipping_rates')->insert([
             'shipping_method_id' => $shipping_method_id,
@@ -249,7 +248,6 @@ class AdminController extends Controller
             'max_weight' => $max_weight,
             'price_per_kg_actual' => $price_per_kg_actual,
             'price_per_kg_volumetric' => $price_per_kg_volumetric,
-            'base_price' => $base_price,
             'created_at' => now(),
             'updated_at' => now()
         ]);
@@ -285,13 +283,13 @@ class AdminController extends Controller
         $price = $request->input('price');
         $sale_price = $request->input('compare_price'); // compare_price maps to sale_price
         $cost_price = $request->input('cost_price');
-        $stock_quantity = $request->input('stock'); // stock maps to stock_quantity
-        $actual_weight = $request->input('weight'); // weight maps to actual_weight
+        $actual_weight = $request->input('weight') ?? $request->input('actual_weight') ?? null;
         $length = $request->input('length');
         $width = $request->input('width');
         $height = $request->input('height');
         $is_featured = $request->has('is_featured') ? 1 : 0;
         $is_active = $request->has('is_active') ? 1 : 0;
+        $subject_to_availability = $request->has('subject_to_availability') ? 1 : 0;
 
         // Auto-generate slug if not provided
         if (empty($slug)) {
@@ -326,20 +324,30 @@ class AdminController extends Controller
 
         if ($request->hasFile('images')) {
             $files = $request->file('images');
+            // Normalize to array when single file is uploaded
+            if (!is_array($files)) {
+                $files = [$files];
+            }
+
             foreach ($files as $index => $file) {
-                if ($file->isValid()) {
-                    $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
+                if ($file && $file->isValid()) {
+                    $filename = time() . '_' . $index . '_' . preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
                     $file->move(public_path('uploads/products'), $filename);
                     $imagePath = 'uploads/products/' . $filename;
                     $uploadedImages[] = $imagePath;
 
                     // Set first image as primary
-                    if ($index === 0) {
+                    if ($primaryImage === null) {
                         $primaryImage = $imagePath;
                     }
                 }
             }
         }
+
+        // Compute shipping dimensions (actual + packaging buffer)
+        $shippingLength = $length !== null && $length !== '' ? floatval($length) + PACKAGING_BUFFER : null;
+        $shippingWidth = $width !== null && $width !== '' ? floatval($width) + PACKAGING_BUFFER : null;
+        $shippingHeight = $height !== null && $height !== '' ? floatval($height) + PACKAGING_BUFFER : null;
 
         // Insert product
         $productId = DB::table('products')->insertGetId([
@@ -353,13 +361,16 @@ class AdminController extends Controller
             'price' => $price,
             'sale_price' => $sale_price,
             'cost_price' => $cost_price,
-            'stock_quantity' => $stock_quantity,
             'actual_weight' => $actual_weight,
             'length' => $length,
             'width' => $width,
             'height' => $height,
+            'shipping_length' => $shippingLength,
+            'shipping_width' => $shippingWidth,
+            'shipping_height' => $shippingHeight,
             'is_featured' => $is_featured,
             'is_active' => $is_active,
+            'subject_to_availability' => $subject_to_availability,
             'created_at' => now(),
             'updated_at' => now()
         ]);
@@ -384,6 +395,15 @@ class AdminController extends Controller
         $this->requireLogin();
         $id = $request->input('id');
 
+        // Compute shipping dimensions using packaging buffer
+        $length = $request->input('length');
+        $width = $request->input('width');
+        $height = $request->input('height');
+
+        $shippingLength = $length !== null && $length !== '' ? floatval($length) + PACKAGING_BUFFER : null;
+        $shippingWidth = $width !== null && $width !== '' ? floatval($width) + PACKAGING_BUFFER : null;
+        $shippingHeight = $height !== null && $height !== '' ? floatval($height) + PACKAGING_BUFFER : null;
+
         $data = [
             'name' => $request->input('name'),
             'slug' => $request->input('slug'),
@@ -395,24 +415,31 @@ class AdminController extends Controller
             'price' => $request->input('price'),
             'sale_price' => $request->input('compare_price'),
             'cost_price' => $request->input('cost_price'),
-            'stock_quantity' => $request->input('stock'),
-            'actual_weight' => $request->input('weight'),
-            'length' => $request->input('length'),
-            'width' => $request->input('width'),
-            'height' => $request->input('height'),
+            'actual_weight' => $request->input('weight') ?? $request->input('actual_weight') ?? null,
+            'length' => $length,
+            'width' => $width,
+            'height' => $height,
+            'shipping_length' => $shippingLength,
+            'shipping_width' => $shippingWidth,
+            'shipping_height' => $shippingHeight,
             'is_featured' => $request->has('is_featured') ? 1 : 0,
             'is_active' => $request->has('is_active') ? 1 : 0,
+            'subject_to_availability' => $request->has('subject_to_availability') ? 1 : 0,
             'updated_at' => now()
         ];
 
         // Handle multiple image uploads
         if ($request->hasFile('images')) {
             $files = $request->file('images');
+            // Normalize to array when single file is uploaded
+            if (!is_array($files)) {
+                $files = [$files];
+            }
             $uploadedImages = [];
 
             foreach ($files as $index => $file) {
-                if ($file->isValid()) {
-                    $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
+                if ($file && $file->isValid()) {
+                    $filename = time() . '_' . $index . '_' . preg_replace('/[^A-Za-z0-9._-]/', '_', $file->getClientOriginalName());
                     $file->move(public_path('uploads/products'), $filename);
                     $imagePath = 'uploads/products/' . $filename;
                     $uploadedImages[] = $imagePath;
@@ -496,8 +523,7 @@ class AdminController extends Controller
                 }
             }
 
-            // Also handle stock_quantity and price as numbers
-            $data['stock_quantity'] = isset($data['stock']) && $data['stock'] !== '' ? $data['stock'] : 0;
+            // Also handle price as number
             $data['price'] = isset($data['price']) && $data['price'] !== '' ? $data['price'] : 0;
 
             try {
@@ -507,6 +533,15 @@ class AdminController extends Controller
                     $errors[] = "Row " . ($index + 2) . ": Duplicate slug '" . $data['slug'] . "' (skipped)";
                     continue;
                 }
+                // Compute shipping dimensions for this row
+                $rowLength = isset($data['length']) && $data['length'] !== '' ? floatval($data['length']) : null;
+                $rowWidth = isset($data['width']) && $data['width'] !== '' ? floatval($data['width']) : null;
+                $rowHeight = isset($data['height']) && $data['height'] !== '' ? floatval($data['height']) : null;
+
+                $rowShippingLength = $rowLength !== null ? $rowLength + PACKAGING_BUFFER : null;
+                $rowShippingWidth = $rowWidth !== null ? $rowWidth + PACKAGING_BUFFER : null;
+                $rowShippingHeight = $rowHeight !== null ? $rowHeight + PACKAGING_BUFFER : null;
+
                 DB::table('products')->insert([
                     'name' => $data['name'] ?? '',
                     'slug' => $data['slug'] ?? '',
@@ -518,13 +553,16 @@ class AdminController extends Controller
                     'price' => $data['price'],
                     'sale_price' => $data['sale_price'] ?? null,
                     'cost_price' => $data['cost_price'] ?? null,
-                    'stock_quantity' => $data['stock_quantity'],
                     'actual_weight' => $data['actual_weight'] ?? null,
-                    'length' => $data['length'] ?? null,
-                    'width' => $data['width'] ?? null,
-                    'height' => $data['height'] ?? null,
+                    'length' => $rowLength,
+                    'width' => $rowWidth,
+                    'height' => $rowHeight,
+                    'shipping_length' => $rowShippingLength,
+                    'shipping_width' => $rowShippingWidth,
+                    'shipping_height' => $rowShippingHeight,
                     'is_featured' => $data['is_featured'] ?? 0,
                     'is_active' => $data['is_active'] ?? 1,
+                    'subject_to_availability' => $data['subject_to_availability'] ?? 0,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);

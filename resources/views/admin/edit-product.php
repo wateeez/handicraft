@@ -98,12 +98,6 @@ $subcategories = $db->fetchAll("SELECT * FROM subcategories WHERE category_id = 
                 </div>
 
                 <div class="form-group">
-                    <label for="stock">Stock Quantity *</label>
-                    <input type="number" id="stock" name="stock" class="form-control" 
-                           value="<?php echo $product['stock_quantity']; ?>" required>
-                </div>
-
-                <div class="form-group">
                     <label for="weight">Weight (kg)</label>
                     <input type="number" id="weight" name="weight" class="form-control" 
                            value="<?php echo $product['actual_weight'] ?? ''; ?>" step="0.01">
@@ -173,7 +167,15 @@ $subcategories = $db->fetchAll("SELECT * FROM subcategories WHERE category_id = 
                     <label>
                         <input type="checkbox" name="is_active" value="1" 
                                <?php echo $product['is_active'] ? 'checked' : ''; ?>>
-                        Active
+                        Active (Visible to customers)
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="subject_to_availability" value="1" 
+                               <?php echo ($product['subject_to_availability'] ?? 0) ? 'checked' : ''; ?>>
+                        Subject to Availability (Prevents online purchase)
                     </label>
                 </div>
             </div>

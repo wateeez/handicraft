@@ -72,8 +72,6 @@ CREATE TABLE products (
     price DECIMAL(10, 2) NOT NULL,
     sale_price DECIMAL(10, 2),
     cost_price DECIMAL(10, 2),
-    stock_quantity INT DEFAULT 0,
-    low_stock_threshold INT DEFAULT 10,
     
     -- Actual Dimensions (for display)
     length DECIMAL(10, 2),
@@ -88,8 +86,9 @@ CREATE TABLE products (
     -- Weight
     actual_weight DECIMAL(10, 2) COMMENT 'Weight in KG',
     
-    is_active BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Hide/show product',
     is_featured BOOLEAN DEFAULT FALSE,
+    subject_to_availability BOOLEAN DEFAULT FALSE COMMENT 'If true, shows product but prevents purchase',
     meta_title VARCHAR(255),
     meta_description TEXT,
     meta_keywords VARCHAR(255),
@@ -131,7 +130,6 @@ CREATE TABLE shipping_rates (
     max_weight DECIMAL(10, 2) NOT NULL COMMENT 'Maximum weight in KG',
     price_per_kg_actual DECIMAL(10, 2) NOT NULL COMMENT 'Price per KG for actual weight',
     price_per_kg_volumetric DECIMAL(10, 2) NOT NULL COMMENT 'Price per KG for volumetric weight',
-    base_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT 'Base/flat rate',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods(id) ON DELETE CASCADE
@@ -329,18 +327,18 @@ INSERT INTO shipping_methods (name, code, description, estimated_days) VALUES
 ('Standard Shipping', 'standard', 'Economy shipping option', '5-7 business days');
 
 -- Insert Sample Shipping Rates for DHL
-INSERT INTO shipping_rates (shipping_method_id, min_weight, max_weight, price_per_kg_actual, price_per_kg_volumetric, base_price) VALUES
-(1, 0, 5, 15.00, 18.00, 10.00),
-(1, 5, 10, 12.00, 15.00, 10.00),
-(1, 10, 20, 10.00, 13.00, 10.00),
-(1, 20, 50, 8.00, 11.00, 10.00);
+INSERT INTO shipping_rates (shipping_method_id, min_weight, max_weight, price_per_kg_actual, price_per_kg_volumetric) VALUES
+(1, 0, 5, 15.00, 18.00),
+(1, 5, 10, 12.00, 15.00),
+(1, 10, 20, 10.00, 13.00),
+(1, 20, 50, 8.00, 11.00);
 
 -- Insert Sample Shipping Rates for Aramex
-INSERT INTO shipping_rates (shipping_method_id, min_weight, max_weight, price_per_kg_actual, price_per_kg_volumetric, base_price) VALUES
-(2, 0, 5, 12.00, 15.00, 8.00),
-(2, 5, 10, 10.00, 13.00, 8.00),
-(2, 10, 20, 8.00, 11.00, 8.00),
-(2, 20, 50, 6.00, 9.00, 8.00);
+INSERT INTO shipping_rates (shipping_method_id, min_weight, max_weight, price_per_kg_actual, price_per_kg_volumetric) VALUES
+(2, 0, 5, 12.00, 15.00),
+(2, 5, 10, 10.00, 13.00),
+(2, 10, 20, 8.00, 11.00),
+(2, 20, 50, 6.00, 9.00);
 
 -- Insert Payment Providers
 INSERT INTO payment_providers (name, code, description, display_order) VALUES
